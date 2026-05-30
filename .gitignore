@@ -1,0 +1,24 @@
+# Personal data — never commit
+state/*
+!state/.gitkeep
+plans/*
+!plans/.gitkeep
+log/*
+!log/.gitkeep
+reviews/*
+!reviews/.gitkeep
+temas/*
+!temas/.gitkeep
+
+# rclone pull backups (red de seguridad de drive-sync)
+.drive-backups/
+
+# Node
+node_modules/
+*.log
+.DS_Store
+
+# Editor
+.vscode/
+.idea/
+*.swp

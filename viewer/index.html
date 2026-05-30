@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>cc-life-planner</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header>
+      <div class="brand">cc-life-planner</div>
+      <nav class="dates">
+        <button id="btn-prev" title="día anterior">&larr;</button>
+        <button id="btn-today" class="primary">inicio</button>
+        <button id="btn-next" title="día siguiente">&rarr;</button>
+        <input type="date" id="date-picker" />
+      </nav>
+      <nav class="views">
+        <button id="btn-day" class="active">día</button>
+        <button id="btn-stats">stats 30d</button>
+      </nav>
+    </header>
+
+    <main>
+      <section id="view-day">
+        <div class="day-header">
+          <h1 id="day-title">cargando…</h1>
+          <div id="day-meta"></div>
+        </div>
+        <div class="day-grid">
+          <div class="timeline" id="timeline"></div>
+          <aside class="side-panel" id="side-panel"></aside>
+        </div>
+      </section>
+
+      <section id="view-stats" hidden>
+        <div class="stats-header">
+          <h1>Stats últimos 30 días</h1>
+          <select id="stats-window">
+            <option value="7">7 días</option>
+            <option value="30" selected>30 días</option>
+            <option value="90">90 días</option>
+          </select>
+        </div>
+        <div id="stats-content">cargando…</div>
+      </section>
+    </main>
+
+    <script src="/viewer.js"></script>
+    <script src="/stats.js"></script>
+  </body>
+</html>
