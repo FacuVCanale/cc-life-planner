@@ -5,7 +5,34 @@ description: Genera planes diarios justificados aplicando scheduling slack-based
 
 # Planner diario
 
-Tu trabajo es generar un plan del día que el usuario pueda ejecutar y entender. Cada decisión de scheduling tiene que estar **justificada** explícitamente. Sin justificación no hay plan.
+Tu trabajo es generar un plan del día que el usuario pueda ejecutar y entender. Cada decisión tiene que estar **justificada** explícitamente. Sin justificación no hay plan.
+
+## Paradigma: TABLERO, no agenda horaria
+
+Facu **no ejecuta en agenda** (multitasking, trabajo emergente concurrente, proyectos que se expanden — ver `state/context.md` "Cómo labura"). La adherencia histórica plan→real es 0-20%. Por eso el plan es un **tablero de decisión híbrido**, con estas secciones:
+
+- **⏰ FIJO** — anclas del calendar con hora real (clases, reuniones, entregas/exámenes con horario). Inamovibles, con `attention`. Son el esqueleto; van en `blocks[]` con `start`/`end`.
+- **🎯 MUST-DO** — lo que tiene deadline duro hoy/inminente (tenga o no hora). Pocos, concretos. → `must_dos[]`.
+- **🚦 CARRILES** — el trabajo flexible que fluye alrededor de lo fijo, **sin hora rígida**: compromiso (GS-VTO), research emergente (concurrente con clases passive), uni. → `carriles[]`.
+- **⚠️ ALERTAS** — deadlines que se acercan, cabos sueltos vencidos, scope-creep, bloqueadores. → `alertas[]`.
+- **🔭 PRÓXIMOS ANCLAS** — anclas con fecha de los próximos días. → `proximos_anclas[]`.
+
+**Ruteo:** evento de calendar con hora → FIJO. Deadline con fecha sin hora → MUST-DO (hoy/inminente) o ALERTA (se acerca). Trabajo flexible de Facu → CARRILES. Lo único que pierde el horario rígido es el trabajo flexible; todo lo que tiene fecha/hora real queda MÁS visible, arriba.
+
+## Paso previo obligatorio: repo scouts
+
+Antes de armar el tablero, **lanzá subagentes en paralelo (uno por repo activo de `~/code/*`)** que inspeccionen el estado real de cada repo. "Activo" = aparece en una task de `tasks.md`, en `state/repo-map.json`, o tuvo commits en los últimos ~3 días. Cada scout (read-only: `git status/log/branch`, PRs, WIP, TODOs, tests) devuelve: estado actual, qué quedó a medias, próximo paso lógico, quick wins, **qué dejar corriendo en background**, mínimo para cerrar, bloqueadores.
+
+Usá los reportes para hacer el tablero **táctico y específico**, anclado a lo fijo del calendar:
+- recomendaciones tipo *"antes de la reunión 16:15, pusheá X y dejá corriendo el build/tests/training Y"*;
+- detectar que un proyecto está **code-complete** (no necesita más horas, necesita cierre) en vez de reservar horas fantasma;
+- alimentar background-work concurrente (entrenamientos, deploys) que Facu corre en paralelo.
+
+Conciliación con `tasks.md`: los scouts aportan **contexto y tácticas**, pero los **deadlines duros salen sólo de `tasks.md`/calendar** (no inventes fechas desde un repo).
+
+## Tracking de cierre
+
+Antes de schedular, leé la sección `## Cierre` de las notas-módulo (`temas/<tema>/<modulo>.md`) de los proyectos involucrados. Usala para: priorizar MUST-DO hacia el **mínimo funcional** (no hacia features nuevas), y emitir una **ALERTA `scope-creep`** si el trabajo reciente (scouts/log) está agregando cosas fuera del mínimo en vez de cerrar.
 
 ## Inputs
 
@@ -13,9 +40,11 @@ Lee estos archivos antes de planificar:
 
 1. `state/tasks.md` — tareas con deadline, estimación, energía, dependencias.
 2. `state/goals.md` — objetivos en tres horizontes.
-3. `state/context.md` — restricciones recurrentes (clases, reuniones), patrones de energía.
-4. `log/*.json` últimos 7 días — para calibrar factor de optimismo.
-5. Google Calendar **de hoy + 6 días siguientes** (vía MCP `mcp__claude_ai_Google_Calendar__*`, calendarios `facundovcanale@gmail.com` + `Universidad`). Hoy son eventos inamovibles; los próximos 6 días son contexto para decidir qué patear y qué adelantar.
+3. `state/context.md` — restricciones recurrentes, capacidad real, factor bimodal, cómo labura.
+4. `log/*.json` últimos 7 días — calibración (factor bimodal por tipo, ver context.md; no el 1.4 único).
+5. Google Calendar **de hoy + 6 días siguientes** (MCP `mcp__claude_ai_Google_Calendar__*`, calendarios `facundovcanale@gmail.com` + `Universidad`). Hoy = anclas FIJOS; próximos 6 días = PRÓXIMOS ANCLAS + decisiones de adelantar/patear.
+6. `temas/<tema>/<modulo>.md` `## Cierre` — mínimo funcional de proyectos abiertos.
+7. **Repo scouts** sobre `~/code/*` (paso previo arriba).
 
 ## Metodología
 
@@ -313,6 +342,40 @@ Factor 1.4 aplicado. Últimos 14 días: 13% optimista (estable, no ajusto).
 - `attention`: `full` (default) | `partial` | `passive`. Solo en bloques de calendar.
 - `concurrent_with`: id del bloque "padre" (típicamente el calendar event). Solo se permite si el padre tiene `attention: partial` (entonces el hijo debe ser `shallow`/`admin`) o `passive` (cualquier energía).
 - `estimated_hours_default: true`: marca tareas que no tenían `est` en `tasks.md` y se les aplicó default por energía. El viewer lo muestra con un asterisco.
+
+## Schema del tablero (ADITIVO — no rompe el viewer)
+
+Además de `blocks[]` (que ahora lleva **sólo los anclas FIJOS** del calendar + buffers, con `start`/`end`), el JSON gana cuatro arrays top-level. El viewer ignora los que no conoce hasta que se le agrega render; `computeStats`/revisor siguen leyendo `blocks`. **Mantené `blocks` con `start`/`end` siempre** (aunque sólo tenga calendar) para no romper la timeline ni las stats.
+
+```json
+{
+  "must_dos": [
+    { "title": "NLP Survey: repaso oral", "task_id": "nlp-survey-presentacion",
+      "module": "uni-nlp", "deadline": "2026-06-04",
+      "why": "oral mañana 16:50, vence <24h", "tactical": "~45min, fresco" }
+  ],
+  "carriles": [
+    { "lane": "compromiso", "title": "GS-VTO: cerrar (no codear)", "task_id": "gsvto-widget",
+      "module": "gsvto-widget", "concurrent_with": "calendar-robotica",
+      "note": "code-complete; falta promover a main + E2E + handoff" },
+    { "lane": "emergente", "title": "FluxNet: A/B EcoPerceiver en background", "task_id": "ad-hoc-fluxnet-2026-06-03",
+      "module": "alethia-ai", "note": "dejar corriendo, concurrente" }
+  ],
+  "alertas": [
+    { "kind": "scope-creep", "text": "GS-VTO: no agregar features, el cierre depende de deploy+handoff" },
+    { "kind": "cabo-suelto", "text": "alethia-vercel-pause vencido (1/6) — decidir" }
+  ],
+  "proximos_anclas": [
+    { "date": "2026-06-04", "text": "16:50 oral NLP" },
+    { "date": "2026-06-05", "text": "DM1 Parcialito 4 + Diseño 18-21 (full)" }
+  ]
+}
+```
+
+- `must_dos[]`/`carriles[]` con `task_id`+`module` alimentan el footer `[[modulo]]` del `.md` y el `regenLogMd` (ya soporta leerlos). `lane` típico: `compromiso` | `emergente` | `uni` | `cierre`.
+- `alertas[].kind`: `deadline` | `cabo-suelto` | `scope-creep` | `bloqueador`.
+- El `.md` se escribe con las 5 secciones del tablero (⏰🎯🚦⚠️🔭). El footer `**Módulos del día:**` se arma con los módulos únicos de `blocks` + `must_dos` + `carriles`.
+- Si tocás este schema, actualizá `viewer/viewer.js`, `examples/plan.example.json` y CLAUDE.md (regla del repo).
 
 ## Reglas duras
 

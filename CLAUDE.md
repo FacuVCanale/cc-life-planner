@@ -20,13 +20,13 @@ Cada slash command edita sólo sus archivos. No mezclar.
 
 | Comando / skill | Lee | Escribe |
 |---|---|---|
-| `/onboarding` (onboarding) | `state/*.md` (para detectar contenido existente) | `state/context.md`, `state/goals.md`, `state/tasks.md` (incremental, con confirmación si hay contenido); **bootstrap de `temas/*.md`** (opcional) |
-| `/archivar` (archivador) | `state/tasks.md`, `log/YYYY-MM-DD.json` (ayer) | `state/tasks.md` (remueve `[x]`), `state/tasks-archive.md` (append); **regenera `## Tasks activas` de los `temas/*.md` afectados** (`status: dormido` si quedan en 0). Para partial/deferred consulta al user antes de editar. |
-| `/plan-hoy` (planner-diario) | `state/*.md`, `log/` últimos 7d, Google Calendar | `plans/YYYY-MM-DD.md` (+ sufijo/footer `[[modulo]]`), `plans/YYYY-MM-DD.json` (+ `block.module`). **Invoca `archivador` antes de arrancar.** |
-| `/capturar` (capturador) | `state/tasks.md`, `state/goals.md` | `state/tasks.md` o `state/goals.md` o `state/inbox.md`; **crea/actualiza `temas/<tema>/<modulo>.md`** |
-| `/log` (logueador) | `plans/YYYY-MM-DD.json` (para inferir task_id y `module`) | `log/YYYY-MM-DD.json`, `log/YYYY-MM-DD.md` (+ footer `[[modulo]]`); **actualiza `## Estado actual`/`## Aprendizajes` de la nota-módulo si la sesión cambió el estado** |
-| `/revisar-semana` (revisor-semanal) | `log/` semana, `state/goals.md` | `reviews/YYYY-WW.md` (+ `[[modulo/tema]]` y footer) |
-| `/revisar-objetivos` (revisor-objetivos) | `state/goals.md`, `log/` últimos 30-90d | sugiere edits a `state/goals.md` (con confirmación del usuario) |
+| `/onboarding` (onboarding) | `state/*.md` (para detectar contenido existente) | `state/context.md`, `state/goals.md`, `state/tasks.md` (incremental, con confirmación si hay contenido); **bootstrap de `temas/*.md`** (opcional, incluye `## Cierre`) |
+| `/archivar` (archivador) | `state/tasks.md`, `log/YYYY-MM-DD.json` (ayer) | `state/tasks.md` (remueve `[x]`), `state/tasks-archive.md` (append); **regenera `## Tasks activas` de los `temas/*.md` afectados** (`status: cerrado` si el `## Cierre` está completo, si no `dormido` si quedan en 0). Para partial/deferred consulta al user antes de editar. |
+| `/plan-hoy` (planner-diario) | `state/*.md`, `log/` últimos 7d, Google Calendar, **`## Cierre` de notas-módulo**, **repo scouts sobre `~/code/*`** | `plans/YYYY-MM-DD.md` (tablero: ⏰FIJO/🎯MUST-DO/🚦CARRILES/⚠️ALERTAS/🔭PRÓXIMOS + footer `[[modulo]]`), `plans/YYYY-MM-DD.json` (`blocks`=anclas FIJOS + `must_dos`/`carriles`/`alertas`/`proximos_anclas`). **Invoca `archivador` antes.** |
+| `/capturar` (capturador) | `state/tasks.md`, `state/goals.md` | `state/tasks.md` o `state/goals.md` o `state/inbox.md`; **crea/actualiza `temas/<tema>/<modulo>.md`** (incluye `## Cierre` si el proyecto tiene cierre definible) |
+| `/log` (logueador) | `plans/YYYY-MM-DD.json` (infiere task_id/`module`); **`scripts/git-day-scan.js` + `state/repo-map.json`** (modo git) | `log/YYYY-MM-DD.json`, `log/YYYY-MM-DD.md` (+ footer `[[modulo]]`); **actualiza `## Estado actual`/`## Cierre`/`## Aprendizajes` de la nota-módulo si la sesión cambió el estado** |
+| `/revisar-semana` (revisor-semanal) | `log/` semana, `state/goals.md`, **`## Cierre` de módulos** | `reviews/YYYY-WW.md` (+ `[[modulo/tema]]` y footer; reporta avance-hacia-cierre) |
+| `/revisar-objetivos` (revisor-objetivos) | `state/goals.md`, `log/` últimos 30-90d, **`## Cierre` de módulos** | sugiere edits a `state/goals.md` (con confirmación; verdicts `cerca-de-cierre`/`scope-creep`) |
 
 Regla: si una skill necesita modificar un archivo fuera de su columna "escribe", **pedí confirmación al usuario** antes de tocar.
 
@@ -67,15 +67,18 @@ Reglas:
 
 - `log/YYYY-MM-DD.json` es el **source of truth**. Schema: `{date: string, entries: [{task_id, time_spent_min, status, notes, timestamp}]}`.
 - `log/YYYY-MM-DD.md` es una **vista**: regenerarla siempre desde el JSON, nunca editar el `.md` a mano.
-- El skill `logueador` y el endpoint `POST /api/log` del viewer comparten la misma lógica de upsert (key: `task_id`).
+- El skill `logueador` y el endpoint `POST /api/log` del viewer comparten la misma lógica de upsert (key: `task_id`), centralizada en `viewer/log-utils.js` (`upsertEntry` + `regenLogMd`). No la dupliques: importá de ahí.
+- **Logueo auto desde git** (modo del `/log`): `scripts/git-day-scan.js YYYY-MM-DD` lee commits del autor (de `state/repo-map.json`) en `~/code/*`, los agrupa en sesiones (gap >90min) y propone entries. El tiempo es **estimado** del span de commits, no medido. El usuario confirma antes del upsert.
 
 ## Schema del plan diario
 
 Cuando `/plan-hoy` genera un plan, **siempre** escribe los dos archivos:
-- `plans/YYYY-MM-DD.md` — texto humano con justificaciones.
+- `plans/YYYY-MM-DD.md` — **tablero** humano: ⏰FIJO / 🎯MUST-DO / 🚦CARRILES / ⚠️ALERTAS / 🔭PRÓXIMOS ANCLAS (ver `planner-diario/SKILL.md`).
 - `plans/YYYY-MM-DD.json` — data estructurada (schema completo en `.claude/skills/planner-diario/SKILL.md`).
 
-El viewer **sólo** consume el JSON. Si tocás el schema, actualizá también el viewer y `examples/plan.example.json`.
+El plan es un **tablero de decisión**, no una agenda horaria (Facu no ejecuta en agenda — ver `state/context.md`). El JSON es **aditivo**: `blocks[]` lleva sólo los anclas FIJOS del calendar (con `start`/`end`, para no romper viewer/stats), y el trabajo flexible vive en `must_dos[]` / `carriles[]` / `alertas[]` / `proximos_anclas[]`. El planner corre **repo scouts** (subagentes por repo de `~/code/*`) antes de armar el tablero, y lee `## Cierre` de las notas-módulo.
+
+El viewer **sólo** consume el JSON. Si tocás el schema, actualizá también el viewer (`viewer/viewer.js`) y `examples/plan.example.json`.
 
 Campos no obvios de un block:
 - `module` (opcional): slug del módulo de la task (derivado del `### Módulo` bajo el que vive en `tasks.md`). Alimenta los `[[modulo]]` de las notas-día y el footer que regenera el viewer. El viewer lo ignora para su UI.

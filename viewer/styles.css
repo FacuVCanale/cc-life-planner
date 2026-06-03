@@ -137,6 +137,10 @@ main { padding: 20px; max-width: 1400px; margin: 0 auto; }
 .side-panel li { margin-bottom: 8px; font-size: 13px; }
 .side-panel .empty { color: var(--text-dim); font-style: italic; font-size: 13px; }
 .side-panel .deferred-when { color: var(--text-dim); font-size: 11px; }
+.side-panel .alerta-kind {
+  display: inline-block; font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em;
+  color: var(--bad); border: 1px solid var(--bad); border-radius: 4px; padding: 0 4px; margin-right: 4px;
+}
 .side-panel .summary {
   margin-top: 12px; padding: 10px; background: var(--surface-2);
   border-radius: 6px; font-size: 12px; line-height: 1.5;

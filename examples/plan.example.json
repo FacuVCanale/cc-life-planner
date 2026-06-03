@@ -12,38 +12,6 @@
   },
   "blocks": [
     {
-      "start": "08:00",
-      "end": "10:00",
-      "type": "deep_work",
-      "category": "ferreteria",
-      "module": "ferr-ventas",
-      "title": "Arreglar el sistema que duplica tickets",
-      "task_id": "ferr-ventas-pos",
-      "estimated_hours": 3,
-      "deadline": "2026-05-12",
-      "justification": {
-        "why_today": "vence en 10d, est 3h con factor 1.4 → 4.2h, conviene arrancar",
-        "why_order": "única ventana >90min hoy, energía fresca"
-      },
-      "source": "tasks.md"
-    },
-    {
-      "start": "10:30",
-      "end": "11:00",
-      "type": "admin",
-      "category": "cocina",
-      "module": "cocina-compras",
-      "title": "Pedido a la verdulería",
-      "task_id": "cocina-compras-verduleria",
-      "estimated_hours": 0.25,
-      "deadline": "2026-05-10",
-      "justification": {
-        "why_today": "hay que pedir hoy para tener todo mañana",
-        "why_order": "quick win antes de abrir el local"
-      },
-      "source": "tasks.md"
-    },
-    {
       "start": "11:00",
       "end": "13:00",
       "type": "calendar",
@@ -54,77 +22,50 @@
       "source": "context.md"
     },
     {
-      "start": "11:00",
-      "end": "12:30",
-      "type": "shallow",
-      "category": "cocina",
-      "module": "cocina-menu",
-      "title": "Armar el menú de la semana",
-      "task_id": "cocina-menu-semana",
-      "estimated_hours": 1,
-      "concurrent_with": "calendar-mostrador",
-      "justification": {
-        "why_today": "para tener el menú listo el lunes",
-        "why_order": "concurrente con el turno en el mostrador (attention: passive)"
-      },
-      "source": "tasks.md"
-    },
-    {
-      "start": "14:00",
-      "end": "15:30",
-      "type": "deep_work",
-      "category": "gimnasio",
-      "module": "gym-rutinas",
-      "title": "Armar rutina de hipertrofia para cliente nuevo",
-      "task_id": "gym-rutina-hipertrofia",
-      "estimated_hours": 2,
-      "deadline": "2026-05-15",
-      "justification": {
-        "why_today": "el cliente arranca el lunes, hay que tenerla lista",
-        "why_order": "post-comida pero ventana suficiente para arrancar"
-      },
-      "source": "tasks.md"
-    },
-    {
-      "start": "16:00",
-      "end": "16:30",
-      "type": "admin",
-      "category": "ferreteria",
-      "module": "ferr-proveedores",
-      "title": "Pedido mensual al proveedor de pinturas",
-      "task_id": "ferr-prov-pintura",
-      "estimated_hours": 0.25,
-      "deadline": "2026-05-10",
-      "justification": {
-        "why_today": "quick win, lo venís pateando 3 días",
-        "why_order": "energía baja después del deep work"
-      },
-      "source": "tasks.md"
-    },
-    {
-      "start": "17:00",
-      "end": "17:45",
-      "type": "shallow",
-      "category": "personal",
-      "module": "curso-marketing-mod",
-      "title": "Mirar curso de marketing para PyMEs",
-      "task_id": "curso-marketing",
-      "estimated_hours": 0.75,
-      "estimated_hours_default": true,
-      "justification": {
-        "why_today": "tarea sin est concreto; default por energía (shallow=0.75h)",
-        "why_order": "energía baja, contenido liviano"
-      },
-      "source": "tasks.md"
+      "start": "13:00",
+      "end": "13:30",
+      "type": "buffer",
+      "category": "buffer",
+      "title": "Buffer / almuerzo",
+      "source": "context.md"
     }
   ],
-  "deferred": [
+  "must_dos": [
     {
-      "title": "Recontar stock de tornillería y bulones",
-      "task_id": "ferr-inventario-recuento",
-      "moved_to": "2026-05-04",
-      "reason": "holgura 14d, hoy compite con el fix del POS que vence antes"
+      "title": "Arreglar el sistema que duplica tickets",
+      "task_id": "ferr-ventas-pos",
+      "module": "ferr-ventas",
+      "deadline": "2026-05-12",
+      "why": "vence en 10d; si se rompe en una venta real es plata perdida",
+      "tactical": "el scout vio el bug en el cierre de caja — empezá por el lock del botón submit"
+    }
+  ],
+  "carriles": [
+    {
+      "lane": "compromiso",
+      "title": "Armar rutina de hipertrofia para cliente nuevo",
+      "task_id": "gym-rutina-hipertrofia",
+      "module": "gym-rutinas",
+      "concurrent_with": "calendar-mostrador",
+      "note": "se puede ir armando durante el turno (passive); el cliente arranca el lunes"
     },
+    {
+      "lane": "emergente",
+      "title": "Pedido a la verdulería + proveedor de pinturas",
+      "task_id": "cocina-compras-verduleria",
+      "module": "cocina-compras",
+      "note": "quick wins de admin, cuando haya un hueco"
+    }
+  ],
+  "alertas": [
+    { "kind": "deadline", "text": "Pedido al proveedor de pinturas vence 2026-05-10 — quedan 2 días" },
+    { "kind": "scope-creep", "text": "El sistema de tickets ya cumple el mínimo; no le agregues reportes nuevos hasta cerrar el bug" }
+  ],
+  "proximos_anclas": [
+    { "date": "2026-05-04", "text": "Recuento de stock (medio día)" },
+    { "date": "2026-05-05", "text": "Reunión con proveedor de pinturas 10:00" }
+  ],
+  "deferred": [
     {
       "title": "Cotizar catering para un casamiento",
       "task_id": "cocina-eventos-catering",
@@ -134,9 +75,9 @@
   ],
   "strategic_recommendations": [
     "El módulo 'eventos' de la cocina tenía 0 tareas activas esta semana. Bloqueé tiempo el lunes.",
-    "Si el fix del POS lleva más de lo estimado, considerá pasar el bloque del jueves a esto."
+    "El scout de ferr-ventas marcó el POS como casi cerrado: falta solo el lock del submit + un test con el cajero."
   ],
   "calibration_notes": [
-    "Factor 1.4 aplicado. Últimos 14 días: 13% optimista (estable, no ajusto)."
+    "Factor bimodal (context.md): el fix del POS es dev → ~0.4x; estimado 3h, esperá ~1.2-1.5h reales."
   ]
 }

@@ -233,6 +233,41 @@
     }
 
     let html = '';
+
+    // Tablero (Feature 2): secciones nuevas. Aditivas — si el plan no las trae, no se muestran.
+    const mustDos = state.plan.must_dos || [];
+    if (mustDos.length) {
+      html += '<h2>🎯 must-do</h2><ul>';
+      for (const m of mustDos) {
+        const meta = [m.deadline ? `vence ${escapeHtml(m.deadline)}` : '', escapeHtml(m.why || '')].filter(Boolean).join(' · ');
+        html += `<li>${escapeHtml(m.title)}${meta ? `<br><span class="deferred-when">${meta}</span>` : ''}${m.tactical ? `<br><span class="deferred-when">${escapeHtml(m.tactical)}</span>` : ''}</li>`;
+      }
+      html += '</ul>';
+    }
+
+    const carriles = state.plan.carriles || [];
+    if (carriles.length) {
+      html += '<h2>🚦 carriles</h2><ul>';
+      for (const c of carriles) {
+        html += `<li><strong>${escapeHtml(c.lane || '')}</strong> · ${escapeHtml(c.title)}${c.note ? `<br><span class="deferred-when">${escapeHtml(c.note)}</span>` : ''}</li>`;
+      }
+      html += '</ul>';
+    }
+
+    const alertas = state.plan.alertas || [];
+    if (alertas.length) {
+      html += '<h2>⚠️ alertas</h2><ul>';
+      for (const a of alertas) html += `<li><span class="alerta-kind">${escapeHtml(a.kind || '')}</span> ${escapeHtml(a.text)}</li>`;
+      html += '</ul>';
+    }
+
+    const proximos = state.plan.proximos_anclas || [];
+    if (proximos.length) {
+      html += '<h2>🔭 próximos anclas</h2><ul>';
+      for (const p of proximos) html += `<li><span class="deferred-when">${escapeHtml(p.date)}</span> ${escapeHtml(p.text)}</li>`;
+      html += '</ul>';
+    }
+
     const deferred = state.plan.deferred || [];
     html += '<h2>para después</h2>';
     if (deferred.length === 0) {

@@ -69,6 +69,20 @@ Mostrá:
 - Diff por tarea (estimado vs loggeado).
 - Pregunta: "¿qué actualizar?".
 
+### Modo 4: auto desde git (`/log --git` o "logueá lo que hice hoy")
+
+Para días de mucho trabajo de código (el patrón real de Facu: ver [[user-como-labura-facu]]). En vez de pedirle que recuerde tiempos, los infiere de los commits.
+
+Pasos:
+1. Corré `node scripts/git-day-scan.js YYYY-MM-DD` (sin fecha → hoy). Lee los commits del autor (de `state/repo-map.json` → `author_emails`) en cada repo de `~/code/*`, los agrupa en **sesiones** (gap >90min = sesión nueva, no cuenta la noche), y propone una entry por repo: `task_id`/`module` (de `repo-map.json`), `time_spent_min` (suma de sesiones, **estimado**), `notes` (mensajes de los commits).
+2. **Mostrale la propuesta al usuario** (tabla: repo → task_id · min · ventana). NO escribas todavía.
+3. El usuario confirma, corrige tiempos, o descarta filas. El tiempo es estimado del span de commits — recordáselo.
+4. Aplicá upsert (mismo contrato que los otros modos) **sólo a las filas confirmadas**.
+5. Si un repo no está en `repo-map.json`, cae en `ad-hoc-<repo>-<fecha>`; ofrecé agregar el mapeo.
+6. Comportamiento de curación del brain: **igual que `/log`** (este modo lo invoca el usuario, no el viewer) → al cerrar, actualizá `## Estado actual` / `## Cierre` / `## Aprendizajes` de los módulos tocados.
+
+Limitación honesta: el tiempo NUNCA es medido, es inferido de timestamps de commits. Trabajo concurrente (varios repos a la vez) puede solaparse — no sumes ciegamente entre repos sin avisar que se solapan.
+
 ## Regeneración del `.md`
 
 Después de cada upsert, regenerá `log/YYYY-MM-DD.md`. **Debe quedar byte-idéntico** a lo que produce
@@ -103,7 +117,12 @@ Reglas del render (igual que el viewer):
   fechas ni a tasks. Si ninguna entry tiene módulo (todo ad-hoc / sin plan), **omití** la línea del footer.
 - Si una task no tiene `module` en el plan, no contribuye al footer (no inventes módulo).
 
-## Actualizar el estado en el brain (al final del log)
+## Actualizar el estado en el brain (al final del log) — PASO FIJO, NO OPCIONAL
+
+**Esto se hace SIEMPRE al cerrar un `/log`, por default — no es a demanda ni hay que pedirlo.** Después de
+escribir el JSON y regenerar el `.md`, evaluá cada módulo tocado y actualizá su nota. Lo único que es
+condicional es *si hubo cambio de estado*: si un módulo no se movió, no lo toques (ver regla abajo). Pero la
+**evaluación es obligatoria en cada log** — nunca cierres un `/log` sin haber pasado por acá.
 
 El log crudo (`log/*.json`/`.md`) es temporal: importa para el planner (calibración, reviews). Pero el
 **second brain** no guarda fechas — guarda el **estado de las cosas**. Por eso, al final de cada log, si la
@@ -111,13 +130,17 @@ sesión **cambió el estado** de un módulo o dejó un **aprendizaje durable**, 
 correspondiente (`temas/<tema>/<modulo>.md`). El módulo lo sacás de `block.module` del plan (o del
 `### Módulo` de la task en `tasks.md`).
 
-Dos secciones de la nota-módulo:
+Tres secciones de la nota-módulo:
 
 - **`## Estado actual`** — snapshot vivo, **se sobrescribe** (no se acumula, sin fechas). 1-4 líneas en
   prosa: qué está hecho, qué falta, blocker actual, próximo paso. Reescribilo para que refleje dónde está
   el módulo **ahora**. Ej: tras loguear "encontré por qué el POS duplica tickets, es el cierre de caja",
   el `## Estado actual` de `ferr-ventas` pasa a *"El POS duplica tickets al cerrar caja. Causa identificada:
   doble submit en el cierre. Próximo: agregar lock al botón y testear con el cajero."*
+- **`## Cierre`** (si existe) — checklist del mínimo funcional. Si la sesión completó un ítem, marcá `- [x]`.
+  **No agregues ítems nuevos al mínimo** salvo que el usuario lo pida explícito — si la sesión metió trabajo
+  fuera del mínimo, es señal de scope creep (mencionáselo, no lo normalices en el checklist). Si se
+  completaron todos los ítems, avisá al usuario y ofrecé setear `status: cerrado` en el frontmatter.
 - **`## Aprendizajes`** — **se acumula** (append), pero sólo señal alta: decisiones, hallazgos, cosas que
   vas a querer recordar. No metas "avancé 30min" acá.
 
@@ -144,3 +167,4 @@ Después de cada log:
 - **Nunca** editar el `.md` a mano. Regenerá desde JSON.
 - **Nunca** pisar entries existentes sin upsert.
 - Timestamp con timezone explícito (UTC-3 para Buenos Aires).
+- **Siempre** evaluá actualizar el brain al cerrar el `/log` (paso fijo, no a demanda). Sólo el logueo rápido del viewer queda exento. Si un módulo no cambió de estado, no lo toques — pero la evaluación no se saltea.

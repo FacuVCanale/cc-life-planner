@@ -152,7 +152,9 @@ conocimiento" para el formato exacto):
    `viewer-categoria: <color>`; `Parte de [[<categoria>]].`; sección `## Módulos` con `[[ ]]` a cada módulo.
 3. **Módulos** (`temas/<tema>/<modulo>.md`): uno por `### Módulo`. Frontmatter `tipo: modulo`,
    `tema: <tema>`, `status: activo`; `Parte de [[<tema>]].`; secciones `## Estado actual` (snapshot vivo,
-   lo mantiene el `logueador`), `## Conocimiento (Brain)` (preguntá UNA vez qué notas del Brain aplican por
+   lo mantiene el `logueador`), `## Cierre` (sólo si el proyecto tiene un "terminado" definible: preguntá
+   "¿cuál es el mínimo para darlo por cerrado?" → `**Mínimo funcional:**` + checklist; omitila si es flujo
+   continuo), `## Conocimiento (Brain)` (preguntá UNA vez qué notas del Brain aplican por
    módulo), `## Tasks activas` (derivada de `tasks.md`), `## Aprendizajes` (decisiones/hallazgos durables).
 
 Si lo saltea, mencioná al cierre que puede armarlo después capturando tasks (el capturador crea las notas

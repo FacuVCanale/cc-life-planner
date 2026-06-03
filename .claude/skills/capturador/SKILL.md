@@ -60,6 +60,7 @@ Cada vez que creás/editás una task:
    `tipo: modulo`, `tema: <tema>`, `capa: conocimiento`, `tags: [life-planner, modulo]`, `status: activo`;
    `# <Tema> · <Módulo>`; línea `Parte de [[<tema>]].`; y secciones, en este orden:
    `## Estado actual` (snapshot vivo del módulo, lo mantiene el `logueador`; arrancá con una línea o vacío),
+   `## Cierre` (sólo si es un proyecto con un "terminado" definible: preguntá UNA vez "¿cuál es el mínimo funcional para dar esto por cerrado?" y volcalo como `**Mínimo funcional:**` + checklist `- [ ]`; el `logueador` actualiza el progreso. Si es un módulo de flujo continuo sin cierre claro, omitila),
    `## Conocimiento (Brain)` (preguntá UNA vez qué notas del Brain aplican, ej. `[[supabase]]`, `[[ml]]`),
    `## Tasks activas`, y `## Aprendizajes` (decisiones/hallazgos durables, append).
    Si el `### Módulo` es nuevo, agregá también su `[[<modulo>]]` a la sección `## Módulos` de la nota-tema.

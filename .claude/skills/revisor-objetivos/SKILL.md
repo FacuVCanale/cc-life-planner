@@ -35,7 +35,11 @@ Aplicá esta lógica:
 | <2h en 30d, > 5h estimadas restantes | **progreso lento** | Revisar si las tareas del goal son demasiado grandes — partir en milestones. |
 | Avance >50% más rápido que lo esperado | **acelerado** | Sugerir agregar siguiente milestone, no quedarse sin pista. |
 | Deadline vencido y no completado | **vencido** | Reescribir deadline o archivar. |
+| `## Cierre` del módulo con casi todo el checklist en `[x]` | **cerca de cierre** | Empujá a clavar el mínimo restante; no abrir frentes nuevos. |
+| Actividad reciente agrega cosas fuera del `## Cierre` (mínimo) | **scope-creep** | Marcar el desvío; proponer cerrar el mínimo antes de seguir expandiendo. |
 | Avance estable, on track | **ok** | Sin acción. |
+
+Para los verdicts **cerca de cierre** / **scope-creep**, leé la sección `## Cierre` de la nota-módulo del goal (mínimo funcional + checklist). Un proyecto con compromiso de horas (ej. GS-VTO ≥5h/día) que ya está code-complete según su `## Cierre` no necesita más horas reservadas — necesita cerrar; decilo explícito.
 
 ## Output
 
