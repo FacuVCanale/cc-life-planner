@@ -11,18 +11,28 @@
     return 'bad';
   }
 
-  function statRow(name, planned, actual, pct, meta) {
-    const max = Math.max(planned, actual, 1);
-    const sign = pct >= 0 ? '+' : '';
+  const toH = (m) => `${Math.round((m / 60) * 10) / 10}h`;
+
+  function rowReal(name, real, max, meta) {
     return `
       <div class="stats-row">
         <div class="name">${escapeHtml(name)}</div>
-        <div class="bar" title="planeado ${planned}min · real ${actual}min">
-          <div class="planned" style="width:${(planned / max) * 100}%"></div>
-          <div class="actual"  style="width:${(actual / max) * 100}%"></div>
-        </div>
-        <div class="pct ${pctClass(pct)}">${sign}${pct}%</div>
+        <div class="bar" title="${real}min"><div class="actual" style="width:${(real / Math.max(max, 1)) * 100}%;height:100%"></div></div>
+        <div class="pct">${toH(real)}</div>
         <div class="meta">${escapeHtml(meta || '')}</div>
+      </div>
+    `;
+  }
+
+  function factorRow(f) {
+    // >1 = más lento que lo estimado (research); <1 = más rápido (dev agéntico)
+    const cls = f.factor >= 1.5 ? 'bad' : f.factor >= 1.2 ? 'warn' : f.factor <= 0.8 ? 'good' : '';
+    return `
+      <div class="stats-row">
+        <div class="name">${escapeHtml(f.category)}</div>
+        <div class="bar" title="estimado ${f.estimated_min}min · real ${f.actual_min}min"><div class="actual" style="width:${Math.min((f.factor / 4) * 100, 100)}%;height:100%"></div></div>
+        <div class="pct ${cls}">${f.factor}×</div>
+        <div class="meta">${toH(f.estimated_min)} → ${toH(f.actual_min)}</div>
       </div>
     `;
   }
@@ -41,45 +51,41 @@
   }
 
   function render(s) {
-    const totals = s.totals;
-    const sign = totals.diff_min >= 0 ? '+' : '';
     let html = '';
 
-    // tarjetas
+    // tarjetas — todo tiempo REAL (del log), sin "planeado" ficticio
     html += '<div class="stats-totals">';
     html += card('días con datos', `${s.days_with_data} / ${s.window_days}`, '');
-    html += card('planeado', `${Math.round(totals.planned_min / 60 * 10) / 10}h`, `${totals.planned_min}min`);
-    html += card('real', `${Math.round(totals.actual_min / 60 * 10) / 10}h`, `${totals.actual_min}min`);
-    html += card('diff', `${sign}${totals.diff_pct}%`, `${sign}${totals.diff_min}min`, pctClass(totals.diff_pct));
+    html += card('tiempo real', toH(s.total_real_min), `${s.total_real_min}min loggeados`);
+    html += card('promedio / día', s.days_with_data ? toH(Math.round(s.total_real_min / s.days_with_data)) : '0h', 'sobre días con datos');
+    html += card('entradas done', `${s.done_entries}`, 'cosas cerradas');
     html += '</div>';
 
-    // por categoría
-    html += '<div class="stats-table"><h2>por categoría</h2>';
+    // tiempo real por categoría
+    const maxCat = Math.max(...s.by_category.map((c) => c.real_min), 1);
+    html += '<div class="stats-table"><h2>tiempo real por categoría</h2>';
     if (s.by_category.length === 0) html += '<div style="color:var(--text-dim)">sin datos</div>';
-    for (const c of s.by_category) {
-      html += statRow(c.category, c.planned_min, c.actual_min, c.diff_pct, `${c.tasks} bloques`);
-    }
+    for (const c of s.by_category) html += rowReal(c.category, c.real_min, maxCat, `${c.share_pct}%`);
     html += '</div>';
 
-    // por día de la semana
-    html += '<div class="stats-table"><h2>por día de la semana</h2>';
+    // tiempo real por día
+    const maxDay = Math.max(...s.by_weekday.map((w) => w.real_min), 1);
+    html += '<div class="stats-table"><h2>tiempo real por día</h2>';
     if (s.by_weekday.length === 0) html += '<div style="color:var(--text-dim)">sin datos</div>';
-    for (const w of s.by_weekday) {
-      html += statRow(w.weekday, w.planned_min, w.actual_min, w.diff_pct, `${w.days_with_data} días`);
+    for (const w of s.by_weekday) html += rowReal(w.weekday, w.real_min, maxDay, `${w.days_with_data}d · ~${toH(w.avg_min)}/d`);
+    html += '</div>';
+
+    // factor de optimismo BIMODAL (por categoría, donde hubo estimación)
+    html += '<div class="stats-table"><h2>factor de optimismo por categoría</h2>';
+    if (!s.factor_by_category || s.factor_by_category.length === 0) {
+      html += '<div style="color:var(--text-dim);font-size:13px">Sin estimaciones recientes para calcular (el tablero no estima horas).</div>';
+    } else {
+      for (const f of s.factor_by_category) html += factorRow(f);
     }
     html += '</div>';
 
-    // recomendación
     html += '<div class="stats-rec">';
-    const f = s.implied_calibration_factor;
-    html += `<strong>completion rate:</strong> ${Math.round(s.completion_rate * 100)}% &nbsp;·&nbsp; <strong>factor implícito:</strong> ${f}<br>`;
-    if (f > 1.5) {
-      html += `Estimás <strong>${Math.round((f - 1) * 100)}%</strong> optimista. Sugerencia: subir <code>factor_optimismo</code> a ${Math.round(f * 10) / 10}.`;
-    } else if (f < 0.85) {
-      html += `Estás siendo <strong>${Math.round((1 - f) * 100)}% pesimista</strong> (o no llenás los bloques). Considerá bajar el factor o revisar por qué quedan bloques sin completar.`;
-    } else {
-      html += `Calibración estable (factor implícito cerca del default 1.4). Sin cambios sugeridos.`;
-    }
+    html += `<strong>El factor es bimodal, no un número único.</strong> Dev agent-driven rinde &lt;1× (terminás más rápido); research / escritura se expande a 3-4×. Por eso un solo "factor implícito" promediado engaña. No se auto-aplica al plan: es guía cualitativa en <code>context.md</code> (dev ~0.4×, research ~4×). Acá lo ves por categoría, calculado sólo en días que tenían estimación.`;
     html += '</div>';
 
     document.getElementById('stats-content').innerHTML = html;

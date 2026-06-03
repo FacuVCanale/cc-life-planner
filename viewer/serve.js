@@ -97,77 +97,83 @@ function computeStats(days) {
     if (fs.existsSync(logFile)) logs[date] = readJsonSafe(logFile, { date, entries: [] });
   }
 
-  let plannedTotal = 0;
-  let actualTotal = 0;
-  let plannedTaskBlocks = 0;
-  let doneEntries = 0;
-  const byCategory = {}; // {cat: {planned, actual, tasks}}
-  const byWeekday = {};  // {dow: {planned, actual, days}}
-
+  // índice task_id -> {category, module} desde todos los planes de la ventana
+  const meta = {};
   for (const plan of plans) {
     if (!plan) continue;
-    const dow = dowName(plan.date);
-    if (!byWeekday[dow]) byWeekday[dow] = { planned: 0, actual: 0, days: new Set() };
-    byWeekday[dow].days.add(plan.date);
+    for (const b of plan.blocks || []) if (b.task_id) meta[b.task_id] = { category: b.category, module: b.module };
+    for (const m of plan.must_dos || []) if (m.task_id && !meta[m.task_id]) meta[m.task_id] = { module: m.module };
+    for (const c of plan.carriles || []) if (c.task_id && !meta[c.task_id]) meta[c.task_id] = { module: c.module };
+  }
+  const MOD_CAT = { uni: 'academia', gsvto: 'gsvto', alethia: 'alethia', costea: 'costea', personal: 'personal', edi: 'personal' };
+  function catFromModule(mod) { return mod ? (MOD_CAT[mod.split('-')[0]] || mod.split('-')[0]) : null; }
+  function catFromTaskId(id) {
+    const s = String(id).toLowerCase();
+    if (/gsvto|gs-vto/.test(s)) return 'gsvto';
+    if (/fluxnet|overworld|alethia|adeco|oneflux|pdd/.test(s)) return 'alethia';
+    if (/nlp|dm1|hsf|robotica|ingsoft|historia|vitro|survey|reacher|tp\d|tpf/.test(s)) return 'academia';
+    if (/costea/.test(s)) return 'costea';
+    if (/edi|oft|pasaporte|mod-|lentes/.test(s)) return 'personal';
+    return 'otros';
+  }
+  function categoryOf(id) {
+    const m = meta[id];
+    if (m && m.category) return m.category;
+    if (m && m.module) return catFromModule(m.module) || catFromTaskId(id);
+    return catFromTaskId(id);
+  }
 
-    const log = logs[plan.date] || { entries: [] };
-    const actualByTaskId = {};
-    for (const e of log.entries) {
-      actualByTaskId[e.task_id] = (actualByTaskId[e.task_id] || 0) + (Number(e.time_spent_min) || 0);
+  // === tiempo REAL del log (source of truth), por categoría y por día ===
+  const byCategory = {}; // {cat: realMin}
+  const byWeekday = {};  // {dow: {real, days:Set}}
+  let totalReal = 0;
+  let doneEntries = 0;
+  for (const date of Object.keys(logs)) {
+    const dow = dowName(date);
+    if (!byWeekday[dow]) byWeekday[dow] = { real: 0, days: new Set() };
+    byWeekday[dow].days.add(date);
+    for (const e of logs[date].entries || []) {
+      const min = Number(e.time_spent_min) || 0;
+      totalReal += min;
       if (e.status === 'done') doneEntries++;
-    }
-
-    for (const block of plan.blocks || []) {
-      if (!block.task_id) continue; // skip calendar / buffer
-      plannedTaskBlocks++;
-      const planned = timeStrToMin(block.end) - timeStrToMin(block.start);
-      const actual = actualByTaskId[block.task_id] || 0;
-      plannedTotal += planned;
-      actualTotal += actual;
-      byWeekday[dow].planned += planned;
-      byWeekday[dow].actual += actual;
-      const cat = block.category || 'sin-categoria';
-      if (!byCategory[cat]) byCategory[cat] = { planned: 0, actual: 0, tasks: 0 };
-      byCategory[cat].planned += planned;
-      byCategory[cat].actual += actual;
-      byCategory[cat].tasks++;
+      byWeekday[dow].real += min;
+      const cat = categoryOf(e.task_id);
+      byCategory[cat] = (byCategory[cat] || 0) + min;
     }
   }
 
-  const diff = actualTotal - plannedTotal;
-  const diffPct = plannedTotal ? (diff / plannedTotal) * 100 : 0;
-  const completionRate = plannedTaskBlocks ? doneEntries / plannedTaskBlocks : 0;
-  const impliedFactor = plannedTotal ? actualTotal / plannedTotal : 1.0;
+  // === factor de optimismo BIMODAL: actual/estimado por categoría, sólo donde hubo estimación ===
+  // (el tablero no estima horas; esto sale de días viejos con estimated_hours en los bloques)
+  const byFactor = {}; // {cat: {est, act}}
+  for (const plan of plans) {
+    if (!plan) continue;
+    const actualByTaskId = {};
+    for (const e of (logs[plan.date]?.entries || [])) actualByTaskId[e.task_id] = (actualByTaskId[e.task_id] || 0) + (Number(e.time_spent_min) || 0);
+    for (const b of plan.blocks || []) {
+      if (!b.task_id || !b.estimated_hours) continue;
+      const cat = b.category || categoryOf(b.task_id);
+      if (!byFactor[cat]) byFactor[cat] = { est: 0, act: 0 };
+      byFactor[cat].est += b.estimated_hours * 60;
+      byFactor[cat].act += actualByTaskId[b.task_id] || 0;
+    }
+  }
 
   return {
     window_days: days,
-    days_with_data: plans.length,
-    totals: {
-      planned_min: plannedTotal,
-      actual_min: actualTotal,
-      diff_min: diff,
-      diff_pct: round1(diffPct),
-    },
+    days_with_data: Object.keys(logs).length,
+    total_real_min: totalReal,
+    done_entries: doneEntries,
     by_category: Object.entries(byCategory)
-      .map(([category, v]) => ({
-        category,
-        planned_min: v.planned,
-        actual_min: v.actual,
-        diff_pct: v.planned ? round1(((v.actual - v.planned) / v.planned) * 100) : 0,
-        tasks: v.tasks,
-      }))
-      .sort((a, b) => b.actual_min - a.actual_min),
+      .filter(([, real_min]) => real_min > 0)
+      .map(([category, real_min]) => ({ category, real_min, share_pct: totalReal ? round1((real_min / totalReal) * 100) : 0 }))
+      .sort((a, b) => b.real_min - a.real_min),
     by_weekday: Object.entries(byWeekday)
-      .map(([weekday, v]) => ({
-        weekday,
-        planned_min: v.planned,
-        actual_min: v.actual,
-        diff_pct: v.planned ? round1(((v.actual - v.planned) / v.planned) * 100) : 0,
-        days_with_data: v.days.size,
-      }))
+      .map(([weekday, v]) => ({ weekday, real_min: v.real, days_with_data: v.days.size, avg_min: v.days.size ? Math.round(v.real / v.days.size) : 0 }))
       .sort((a, b) => weekdayOrder(a.weekday) - weekdayOrder(b.weekday)),
-    completion_rate: round2(completionRate),
-    implied_calibration_factor: round2(impliedFactor),
+    factor_by_category: Object.entries(byFactor)
+      .filter(([, v]) => v.est > 0 && v.act > 0)
+      .map(([category, v]) => ({ category, estimated_min: v.est, actual_min: v.act, factor: round2(v.act / v.est) }))
+      .sort((a, b) => b.factor - a.factor),
   };
 }
 
