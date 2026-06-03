@@ -70,3 +70,14 @@ El viewer (`viewer/viewer.js`), `serve.js:computeStats`, `stats.js`, `revisor-se
 
 ## Próximo (cuando planifiques)
 - Correr `/plan-hoy` real con el modo tablero (scouts en vivo + 5 secciones) para validar el flujo completo de generación end-to-end.
+
+## Diseño del viewer — BRIEF editorial (mantener, no volver a "dashboard")
+
+Facu rechazó el look dashboard (cards de colores, badges, grid con huecos = "vibecodeado"). El viewer es **lo que un asistente te da para el día**: un brief editorial. Reglas firmes (ver memoria `feedback-viewer-diseno`):
+- **Una sola columna** (~720px, tipo documento), monocromo slate, 1px dividers, sin cards de colores, tipografía protagonista, mucho aire. Guía: skill `minimalist-ui`.
+- **Orden:** encabezado (fecha grande + síntesis del día) → **Tu día** (agenda) → **Lo que importa** (must-do) → **En paralelo** (carriles) → **Ojo con** (alertas) → **Lo que viene** → **Notas**.
+- **Labels humanos** (no "MUST-DO/CARRILES"), sin emojis. Números en mono/tabular.
+- **Descripción al abrir:** items de "Lo que importa" y "En paralelo" colapsados = solo título + meta + toggle `+/−`; al click abren la descripción + el form de logueo (`.loggable[data-task-id]`).
+- **Alertas:** punto por severidad (no chips). **Lane de carril por proyecto** (Alethia/Overworld = `alethia`, no `uni`).
+- Zero-dep (vanilla). Skills taste global en `~/.claude/skills/`.
+- **`/plan-hoy` abre el viewer solo** → `scripts/open-viewer.sh` (paso 8 del command).

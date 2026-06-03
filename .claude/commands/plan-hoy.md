@@ -13,8 +13,9 @@ Antes de planificar: limpiá `state/tasks.md`. Después generá el plan.
 2. Leé `state/tasks.md`, `state/goals.md`, `state/context.md`.
 3. Leé los últimos 7 días de `log/*.json` para calcular el factor de optimismo calibrado.
 4. Si la integración de Google Calendar está disponible (MCP `mcp__claude_ai_Google_Calendar__*`), traé los eventos del día.
-5. Aplicá la metodología completa definida en `.claude/skills/planner-diario/SKILL.md` (slack-based + alineación a goals + energía + buffers).
+5. Aplicá la metodología completa definida en `.claude/skills/planner-diario/SKILL.md` (slack-based + alineación a goals + energía + buffers). Para los **repo scouts** y el **paradigma tablero**, seguí el SKILL.
 6. Mostrá el plan en el chat con el formato del SKILL.
 7. Escribí `plans/YYYY-MM-DD.md` (idéntico al chat) y `plans/YYYY-MM-DD.json` (data estructurada según schema).
+8. **Levantá y abrí el viewer**: corré `bash scripts/open-viewer.sh` (levanta el server si no está corriendo y abre `http://localhost:5173` en el navegador, ya posicionado en el plan de hoy).
 
 **Importante**: nunca escribas el plan sin justificación por bloque. Si te falta info para justificar, pedila al usuario antes de generar.

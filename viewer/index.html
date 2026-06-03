@@ -3,7 +3,10 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>cc-life-planner</title>
+    <title>cc-life-planner — tablero del día</title>
+    <meta name="description" content="Tablero diario del planner: fijo, must-do, carriles y alertas." />
+    <meta name="color-scheme" content="dark" />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%230f172a'/><path d='M9 16.5l4.5 4.5L23 11' stroke='%2360a5fa' stroke-width='2.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>" />
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
@@ -23,14 +26,7 @@
 
     <main>
       <section id="view-day">
-        <div class="day-header">
-          <h1 id="day-title">cargando…</h1>
-          <div id="day-meta"></div>
-        </div>
-        <div class="day-grid">
-          <div class="timeline" id="timeline"></div>
-          <aside class="side-panel" id="side-panel"></aside>
-        </div>
+        <article class="brief" id="brief"></article>
       </section>
 
       <section id="view-stats" hidden>
