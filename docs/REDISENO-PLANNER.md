@@ -64,6 +64,9 @@ El viewer (`viewer/viewer.js`), `serve.js:computeStats`, `stats.js`, `revisor-se
 - [x] **F3**: convención `## Cierre` + seed `gsvto-widget.md` y `alethia-pdd.md`; hooks en `capturador` (template), `onboarding` (template), `logueador` (mantenimiento), `archivador` (`status: cerrado` vs `dormido`), `revisor-objetivos` (verdicts `cerca-de-cierre`/`scope-creep`), `revisor-semanal` (avance-hacia-cierre).
 - [x] **F2**: `planner-diario/SKILL.md` reescrito (paradigma tablero + repo scouts + tracking cierre + schema aditivo); `viewer/viewer.js` render aditivo + `.alerta-kind` en styles.css; `examples/plan.example.json` migrado; CLAUDE.md actualizado (tabla + schema). Verificado que NO rompe viewer/stats.
 
-## Pendiente de verificación visual (no bloqueante)
-- Ver el render del tablero en el navegador con Playwright (la lógica ya está verificada: no rompe).
-- Probar `/plan-hoy` end-to-end con el modo tablero (scouts + 5 secciones) — sugerido sobre el próximo plan.
+## Verificación visual (✅ hecha 2026-06-03 con Playwright)
+- Regeneré `plans/2026-06-03` al formato tablero con datos reales de los scouts y lo abrí en el viewer.
+- Confirmado: timeline con los anclas FIJOS (Robótica passive, CEO JPMorgan) bien posicionados + las 4 secciones nuevas (🎯/🚦/⚠️/🔭) renderizando, chips de `alerta.kind` con estilo. Sin errores de consola (salvo favicon 404). No rompió la timeline ni el side panel existente.
+
+## Próximo (cuando planifiques)
+- Correr `/plan-hoy` real con el modo tablero (scouts en vivo + 5 secciones) para validar el flujo completo de generación end-to-end.
