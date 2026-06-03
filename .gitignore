@@ -22,3 +22,6 @@ node_modules/
 .vscode/
 .idea/
 *.swp
+
+# artefactos de Playwright MCP
+.playwright-mcp/
