@@ -192,7 +192,7 @@ main { padding: 0; }
 .stats-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 20px; }
 .stats-header h1 { margin: 0; font-size: 22px; }
 .stats-totals {
-  display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px;
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 24px;
 }
 .stat-card {
   background: var(--surface); border: 1px solid var(--border);

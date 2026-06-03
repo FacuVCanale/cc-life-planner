@@ -184,16 +184,15 @@ Antes de cerrar:
 - ¿Hay alguna tarea con slack negativo que no entró por falta de tiempo? Flaggealo arriba: "Necesitás mover algo o aceptar el deslizamiento."
 - ¿La distribución del día está inclinada a una sola categoría? Mencionalo si hay desbalance importante.
 
-### 6. Calibración del factor de optimismo
+### 6. Calibración del factor de optimismo — BIMODAL por categoría (NO un escalar)
 
-Calculá empíricamente desde `log/`:
+El factor de Facu es **bimodal**: dev agent-driven rinde <1× (termina más rápido), research/escritura se expande a 3-4× (ver `state/context.md`). Un solo número promediado engaña. Calibrá por categoría con datos reales:
 
-```
-factor_implicito = sum(actual_min) / sum(planned_min)
-                   sobre últimos 14 días con datos
-```
+1. Corré **`node scripts/calibration.js --days 30`** → te da el factor real por categoría (actual/estimado), ej: `gsvto 1.9×, alethia 0.86×, academia 0.43×, costea 0.06×`.
+2. Al estimar cada task, **aplicá el factor de SU categoría**, no el 1.4 genérico. Categoría sin dato suficiente → usá el default bimodal de `context.md` (dev ~0.4×, research ~4×, admin ~1×).
+3. Anotá en `calibration_notes` qué factores usaste por categoría y de cuántos días salen. Si una categoría tiene `n` chico (pocas estimaciones), decilo (baja confianza).
 
-Si difiere del default 1.4 por más de 0.1, **usá el implícito** y anotalo en `calibration_notes` del JSON: "Factor 1.6 calibrado contra 12 días de log; estimás ~60% optimista".
+Nunca escribas un solo "factor implícito" promediado ni "1.4 estable" — eso es lo que hay que evitar.
 
 ## Output: formato del plan
 

@@ -57,7 +57,8 @@
     html += '<div class="stats-totals">';
     html += card('días con datos', `${s.days_with_data} / ${s.window_days}`, '');
     html += card('tiempo real', toH(s.total_real_min), `${s.total_real_min}min loggeados`);
-    html += card('promedio / día', s.days_with_data ? toH(Math.round(s.total_real_min / s.days_with_data)) : '0h', 'sobre días con datos');
+    html += card('promedio / día', s.days_with_data ? toH(Math.round(s.total_real_min / s.days_with_data)) : '0h', 'todos los días con datos');
+    html += card('promedio / día laboral', s.workday_days ? toH(Math.round(s.workday_real_min / s.workday_days)) : '0h', `lun-vie · ${s.workday_days} días`);
     html += card('entradas done', `${s.done_entries}`, 'cosas cerradas');
     html += '</div>';
 

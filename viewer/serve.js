@@ -158,10 +158,17 @@ function computeStats(days) {
     }
   }
 
+  // promedio por día LABORAL (lun-vie): tiempo de días hábiles / cantidad de días hábiles con datos
+  const WORKDAYS = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes'];
+  let workdayReal = 0, workdayDays = 0;
+  for (const d of WORKDAYS) if (byWeekday[d]) { workdayReal += byWeekday[d].real; workdayDays += byWeekday[d].days.size; }
+
   return {
     window_days: days,
     days_with_data: Object.keys(logs).length,
     total_real_min: totalReal,
+    workday_real_min: workdayReal,
+    workday_days: workdayDays,
     done_entries: doneEntries,
     by_category: Object.entries(byCategory)
       .filter(([, real_min]) => real_min > 0)
