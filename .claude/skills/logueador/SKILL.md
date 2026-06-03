@@ -83,6 +83,25 @@ Pasos:
 
 Limitación honesta: el tiempo NUNCA es medido, es inferido de timestamps de commits. Trabajo concurrente (varios repos a la vez) puede solaparse — no sumes ciegamente entre repos sin avisar que se solapan.
 
+### Modo 5: calendar — eventos del día (clases, reuniones, lo NO-código)
+
+El logueo del día tiene **dos fuentes automáticas**: git (código) y **calendar** (clases, reuniones, eventos). No le pidas a Facu que recuerde "a mano" — traé su agenda y preguntá por cada evento.
+
+Pasos (corre junto al Modo 4 cuando se loguea el día completo):
+1. Traé los eventos del día de Google Calendar vía MCP `mcp__claude_ai_Google_Calendar__list_events` (calendarios `facundovcanale@gmail.com` + `Universidad`), igual que hace el planner.
+2. Por cada evento, **proponé una entry y preguntá si lo hizo**: `task_id` = `calendar-<slug-del-evento>-<fecha>`, `time_spent_min` = duración del evento (editable), `status` según respuesta del user: **fui/lo hice** → `done`, **parcial** → `partial`, **no fui** → no registrar (o `skipped` si quiere dejar traza).
+3. **Módulo**: derivá del summary del evento por prefijo (igual que el planner matchea attention en `context.md`): Robótica→`uni-robotica`, NLP→`uni-nlp`, Historia→`uni-historia`, Diseño→`uni-diseno`, Software→`uni-ingsoft`. Reuniones/eventos personales (ej. "CEO JPMorgan") → sin módulo salvo que aplique uno.
+4. **Concurrencia**: si una clase era `attention: passive` y el git scan ya capturó código de esa franja (ej. FluxNet durante Robótica), no dupliques tiempo — registrá la clase como `done` (asistencia) y dejá el trabajo concurrente en su propia entry de git; mencionalo en las notas.
+5. El user confirma/ajusta; aplicá upsert sólo a lo confirmado.
+
+### Flujo recomendado "loguear el día" (`/log --git` o "logueá lo de hoy")
+
+Combiná las fuentes en una sola pasada, mostrando UNA tabla de propuestas para confirmar:
+1. **Git** (Modo 4) → trabajo de código.
+2. **Calendar** (Modo 5) → clases/reuniones.
+3. **Manual** → lo que no esté en ninguna (ej. entreno, llamada). Preguntá "¿algo más que no haya salido de git ni del calendar?".
+Luego upsert de todo lo confirmado + curación del brain.
+
 ## Regeneración del `.md`
 
 Después de cada upsert, regenerá `log/YYYY-MM-DD.md`. **Debe quedar byte-idéntico** a lo que produce
