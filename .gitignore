@@ -7,8 +7,9 @@ log/*
 !log/.gitkeep
 reviews/*
 !reviews/.gitkeep
-temas/*
-!temas/.gitkeep
+
+# temas/ migrado al vault (~/second-brain/Projects). Backup local de la migración:
+_temas-migrado-*/
 
 # rclone pull backups (red de seguridad de drive-sync)
 .drive-backups/

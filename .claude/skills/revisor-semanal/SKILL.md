@@ -48,7 +48,7 @@ Si < -30%: o sobreestimás o no estás llenando los bloques. Investigar.
 
 ### 5. Avance hacia el cierre de proyectos abiertos
 
-Para cada proyecto con `## Cierre` en su nota-módulo (GS-VTO, PDD, etc.): ¿cuántos ítems del checklist se cerraron esta semana? ¿el proyecto está **convergiendo** o el trabajo se fue a cosas **fuera del mínimo** (scope-creep)? Llamá la atención si un proyecto con compromiso de horas (ej. GS-VTO ≥5h/día) sumó muchas horas pero no movió el checklist de cierre.
+Para cada proyecto con `## Cierre` en su nota-proyecto del vault (GS-VTO, PDD, etc.), leído vía el extractor (`const { extractModuleState } = require('./viewer/vault-extractor')` → `extractModuleState(slug).cierre`; CLI: `node viewer/vault-extractor.js <slug>`): ¿cuántos ítems del checklist se cerraron esta semana? ¿el proyecto está **convergiendo** o el trabajo se fue a cosas **fuera del mínimo** (scope-creep)? Llamá la atención si un proyecto con compromiso de horas (ej. GS-VTO ≥5h/día) sumó muchas horas pero no movió el checklist de cierre.
 
 > **Nota tablero (Feature 2):** desde el rediseño, `plans/*.json` lleva en `blocks` sólo los anclas del calendar; el trabajo flexible vive en `carriles`/`must_dos` (sin horas). El `completion_rate` y `diff_pct` basados en `blocks` con `task_id` quedan **incompletos** — para esta review pesá más el **log real** (incluido el logueo auto desde git) y el avance del `## Cierre` que el cumplimiento de bloques horarios.
 

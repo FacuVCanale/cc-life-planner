@@ -32,7 +32,11 @@ Conciliación con `tasks.md`: los scouts aportan **contexto y tácticas**, pero 
 
 ## Tracking de cierre
 
-Antes de schedular, leé la sección `## Cierre` de las notas-módulo (`temas/<tema>/<modulo>.md`) de los proyectos involucrados. Usala para: priorizar MUST-DO hacia el **mínimo funcional** (no hacia features nuevas), y emitir una **ALERTA `scope-creep`** si el trabajo reciente (scouts/log) está agregando cosas fuera del mínimo en vez de cerrar.
+Antes de schedular, leé la sección `## Cierre` de las notas-proyecto del vault vía el extractor
+(`const { extractModuleState } = require('./viewer/vault-extractor')` → `extractModuleState(slug).cierre` /
+`.estado_actual`; CLI: `node viewer/vault-extractor.js <slug>`) para los proyectos involucrados. Usala para:
+priorizar MUST-DO hacia el **mínimo funcional** (no hacia features nuevas), y emitir una **ALERTA `scope-creep`**
+si el trabajo reciente (scouts/log) está agregando cosas fuera del mínimo en vez de cerrar.
 
 ## Inputs
 
@@ -43,7 +47,7 @@ Lee estos archivos antes de planificar:
 3. `state/context.md` — restricciones recurrentes, capacidad real, factor bimodal, cómo labura.
 4. `log/*.json` últimos 7 días — calibración (factor bimodal por tipo, ver context.md; no el 1.4 único).
 5. Google Calendar **de hoy + 6 días siguientes** (MCP `mcp__claude_ai_Google_Calendar__*`, calendarios `facundovcanale@gmail.com` + `Universidad`). Hoy = anclas FIJOS; próximos 6 días = PRÓXIMOS ANCLAS + decisiones de adelantar/patear.
-6. `temas/<tema>/<modulo>.md` `## Cierre` — mínimo funcional de proyectos abiertos.
+6. Notas-proyecto del vault (vía `viewer/vault-extractor.js`) — estado + mínimo funcional (`extractModuleState(slug).cierre` / `.estado_actual`) de proyectos abiertos.
 7. **Repo scouts** sobre `~/code/*` (paso previo arriba).
 
 ## Metodología

@@ -39,7 +39,7 @@ Aplicá esta lógica:
 | Actividad reciente agrega cosas fuera del `## Cierre` (mínimo) | **scope-creep** | Marcar el desvío; proponer cerrar el mínimo antes de seguir expandiendo. |
 | Avance estable, on track | **ok** | Sin acción. |
 
-Para los verdicts **cerca de cierre** / **scope-creep**, leé la sección `## Cierre` de la nota-módulo del goal (mínimo funcional + checklist). Un proyecto con compromiso de horas (ej. GS-VTO ≥5h/día) que ya está code-complete según su `## Cierre` no necesita más horas reservadas — necesita cerrar; decilo explícito.
+Para los verdicts **cerca de cierre** / **scope-creep**, leé la sección `## Cierre` de la nota-proyecto del goal en el vault vía el extractor (`const { extractModuleState } = require('./viewer/vault-extractor')` → `extractModuleState(slug).cierre`; CLI: `node viewer/vault-extractor.js <slug>`) — mínimo funcional + checklist. Un proyecto con compromiso de horas (ej. GS-VTO ≥5h/día) que ya está code-complete según su `## Cierre` no necesita más horas reservadas — necesita cerrar; decilo explícito.
 
 ## Output
 

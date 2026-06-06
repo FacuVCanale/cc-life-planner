@@ -138,24 +138,27 @@ Formato (dos niveles: `## Tema` → `### Módulo`):
 - [ ] Pedido a la verdulería (id: cocina-compras-verduleria) — vence 2026-05-10 — est 0.25h — energía: admin — depende: nada
 ```
 
-### Etapa 4 — bootstrap de la capa de conocimiento (`temas/`) — opcional/skippable
+### Etapa 4 — bootstrap de la capa de conocimiento (vault `~/second-brain`) — opcional/skippable
 
-> Última cosa (la podés saltar): te armo el "mapa" de tus temas en Obsidian para que el grafo conecte
+> Última cosa (la podés saltar): te armo el "mapa" de tus proyectos en Obsidian para que el grafo conecte
 > proyectos↔módulos↔días. ¿Lo hago ahora o lo dejamos para después?
 
-Si acepta, generá la jerarquía de notas-MOC en `temas/` (ver skill `capturador` → "Sincronizar capa de
-conocimiento" para el formato exacto):
+Si acepta, generá las **notas-proyecto** en `~/second-brain/Projects/<Contexto>/<modulo>.md` (`type: project`),
+donde `<Contexto>` ∈ {Alethia, Costea, GS-VTO, Universidad, Edimburgo, Personal} (ver skill `capturador` →
+"Sincronizar capa de conocimiento" para el formato exacto). Las categorías ya **no** se crean como notas: los
+MOCs `Trabajo`/`Estudio`/`Vida` ya existen en el vault; en su lugar, a cada nota asignale el `context`
+(`trabajo|estudio|vida`) que corresponda al tema.
 
-1. **Categorías** (`temas/_categorias/<cat>.md`): agrupá los temas en pocas categorías padre. Preguntá si no
-   es obvio (default sugerido: Trabajo / Estudio / Vida). Cada categoría lista sus temas con `[[ ]]`.
-2. **Temas** (`temas/<tema>/<tema>.md`): uno por `## Tema`. Frontmatter `tipo: tema`, `categoria: <cat>`,
-   `viewer-categoria: <color>`; `Parte de [[<categoria>]].`; sección `## Módulos` con `[[ ]]` a cada módulo.
-3. **Módulos** (`temas/<tema>/<modulo>.md`): uno por `### Módulo`. Frontmatter `tipo: modulo`,
-   `tema: <tema>`, `status: activo`; `Parte de [[<tema>]].`; secciones `## Estado actual` (snapshot vivo,
+1. **Módulos** (`~/second-brain/Projects/<Contexto>/<modulo>.md`): uno por `### Módulo`. Frontmatter del
+   schema del vault (`~/second-brain/_meta/taxonomy.md`): `type: project`, `status: active`,
+   `context: trabajo|estudio|vida`, `module: <slug>`, `repos: []`, `people: []`, `companies: []`,
+   `decisions: []`, `summary: ""`, `tags: [project, <tema>]`. Cuerpo: `## Estado actual` (snapshot vivo,
    lo mantiene el `logueador`), `## Cierre` (sólo si el proyecto tiene un "terminado" definible: preguntá
    "¿cuál es el mínimo para darlo por cerrado?" → `**Mínimo funcional:**` + checklist; omitila si es flujo
    continuo), `## Conocimiento (Brain)` (preguntá UNA vez qué notas del Brain aplican por
    módulo), `## Tasks activas` (derivada de `tasks.md`), `## Aprendizajes` (decisiones/hallazgos durables).
+2. **Hub de tema** (opcional): si un `## Tema` agrupa varios módulos y querés una nota paraguas, creá
+   `~/second-brain/Projects/<Contexto>/<tema>.md` (también `type: project`, con su `context` y `summary`).
 
 Si lo saltea, mencioná al cierre que puede armarlo después capturando tasks (el capturador crea las notas
 faltantes on-demand).

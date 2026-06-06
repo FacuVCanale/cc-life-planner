@@ -44,21 +44,23 @@ Agrupar por la sección original (`## Ferretería`, `## Cocina`, etc.). Mantener
 
 6. Reportá: "Archivadas N tasks de M secciones."
 
-### Paso 1b — sincronizar notas-módulo (`temas/`)
+### Paso 1b — sincronizar notas-proyecto del vault
 
-Las notas-módulo (`temas/<tema>/<modulo>.md`) tienen una sección `## Tasks activas` que es **vista
-derivada** de `tasks.md`. Después de archivar:
+Las notas-proyecto del vault (`~/second-brain/Projects/**/<modulo>.md`, localizalas por el module slug —
+glob `Projects/**/<modulo>.md` o `node viewer/vault-extractor.js <modulo>`) tienen una sección
+`## Tasks activas` que es **vista derivada** de `tasks.md`. Después de archivar:
 
-1. Para cada `### Módulo` que perdió tasks, **regenerá entera** su sección `## Tasks activas` desde el
-   estado actual de `tasks.md` (no la parchees línea por línea).
-2. Si un módulo quedó con **0 tasks activas**, seteá su `status` en el frontmatter (no borres la nota — su
-   conocimiento durable y los días pasados que la referencian persisten):
+1. Para cada `### Módulo` que perdió tasks, **regenerá entera** su sección `## Tasks activas` en
+   `~/second-brain/Projects/**/<modulo>.md` desde el estado actual de `tasks.md` (no la parchees línea por
+   línea).
+2. Si un módulo quedó con **0 tasks activas**, seteá su `status` en el frontmatter de esa nota (no borres la
+   nota — su conocimiento durable y los días pasados que la referencian persisten):
    - `status: cerrado` si la nota tiene `## Cierre` y su checklist está **completo** (todos `[x]`): alcanzó
      el mínimo funcional, no quedó dormido por inactividad.
    - `status: dormido` en cualquier otro caso (quedó sin tasks por inactividad, no por cierre).
-3. **Nunca** edites `Brain/` ni borres notas-módulo desde acá.
+3. **Nunca** edites `Brain/Conventions/` ni borres notas-proyecto desde acá.
 
-Si la nota-módulo no existe todavía (data vieja sin migrar), no la crees acá — es trabajo del capturador;
+Si la nota-proyecto no existe todavía (data vieja sin migrar), no la crees acá — es trabajo del capturador;
 sólo mencionalo en el reporte.
 
 ### Paso 2 — revisar partial/deferred

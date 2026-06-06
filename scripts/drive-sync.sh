@@ -27,7 +27,7 @@ if [ "$DIRECTION" != "push" ] && [ "$DIRECTION" != "pull" ]; then
 fi
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-FOLDERS=(state plans log reviews temas)
+FOLDERS=(state plans log reviews)
 STAMP="$(date +%Y-%m-%d_%H%M%S)"
 
 # Sanity: el remote existe?

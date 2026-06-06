@@ -39,41 +39,48 @@ Reglas:
 - `est`: estimación en horas. Si no sabe, **guardá `est: TBD`**. El planner aplica un default por energía (deep=2h, shallow=0.75h, admin=0.25h) y la marca con asterisco en el plan. Cuando el usuario sepa el real, corre `/capturar` para actualizarla.
 - `energía`: deep / shallow / admin. Default `shallow` si no es claro.
 - `depende`: id de otra tarea, o `nada`.
-- **Toda tarea va bajo un `### Módulo`.** El módulo determina a qué nota-módulo del grafo pertenece (ver
+- **Toda tarea va bajo un `### Módulo`.** El módulo determina a qué nota-proyecto del vault pertenece (ver
   "Sincronizar capa de conocimiento"). Si no es obvio bajo qué módulo va, preguntá; no la dejes suelta
   directamente bajo el `##`.
 
 Si el **tema** (`## <Nombre>`) no existe, creá la sección. Si el **módulo** (`### <Nombre>`) no existe
 dentro del tema, creá el subheader (y su nota-módulo, ver abajo).
 
-## Sincronizar capa de conocimiento (`temas/`)
+## Sincronizar capa de conocimiento (vault `~/second-brain`)
 
-El vault de Obsidian tiene una jerarquía de notas-MOC en `temas/`: categoría → tema → módulo. Las tasks
-**no** son nodos del grafo; aparecen como texto plano dentro de la sección `## Tasks activas` de su
-nota-módulo, que es una **vista derivada** de `tasks.md` (igual que `log/*.md` lo es de `log/*.json`).
+El conocimiento durable vive en el vault de Obsidian como **notas-proyecto** en
+`~/second-brain/Projects/<Contexto>/<modulo>.md` (`type: project`), donde `<Contexto>` ∈
+{Alethia, Costea, GS-VTO, Universidad, Edimburgo, Personal}. Las tasks **no** son nodos del grafo; aparecen
+como texto plano dentro de la sección `## Tasks activas` de su nota-proyecto, que es una **vista derivada**
+de `tasks.md` (igual que `log/*.md` lo es de `log/*.json`).
 
 Cada vez que creás/editás una task:
 
 1. **Ubicá el módulo** (el `### <Módulo>` bajo el que va la task). Slug del módulo = kebab-case, prefijado
-   por el tema cuando ayuda a la unicidad (`ferr-ventas`, `cocina-menu`, `gym-rutinas`).
-2. **Si la nota-módulo no existe** (`temas/<tema>/<modulo>.md`): creala con frontmatter
-   `tipo: modulo`, `tema: <tema>`, `capa: conocimiento`, `tags: [life-planner, modulo]`, `status: activo`;
-   `# <Tema> · <Módulo>`; línea `Parte de [[<tema>]].`; y secciones, en este orden:
+   por el tema cuando ayuda a la unicidad (`ferr-ventas`, `cocina-menu`, `gym-rutinas`). Para localizar la
+   nota existente, hacé glob por slug: `~/second-brain/Projects/**/<modulo>.md` (o
+   `node viewer/vault-extractor.js <modulo>` desde la raíz del repo) — no hardcodees la carpeta de contexto.
+2. **Si la nota-proyecto no existe**: creala en `~/second-brain/Projects/<Contexto>/<modulo>.md` con el
+   frontmatter del schema del vault (`~/second-brain/_meta/taxonomy.md`):
+   `type: project`, `status: active`, `context: trabajo|estudio|vida`, `module: <slug>`, `repos: []`,
+   `people: []`, `companies: []`, `decisions: []`, `summary: ""`, `tags: [project, <tema>]`. Luego el cuerpo,
+   en este orden:
    `## Estado actual` (snapshot vivo del módulo, lo mantiene el `logueador`; arrancá con una línea o vacío),
    `## Cierre` (sólo si es un proyecto con un "terminado" definible: preguntá UNA vez "¿cuál es el mínimo funcional para dar esto por cerrado?" y volcalo como `**Mínimo funcional:**` + checklist `- [ ]`; el `logueador` actualiza el progreso. Si es un módulo de flujo continuo sin cierre claro, omitila),
    `## Conocimiento (Brain)` (preguntá UNA vez qué notas del Brain aplican, ej. `[[supabase]]`, `[[ml]]`),
    `## Tasks activas`, y `## Aprendizajes` (decisiones/hallazgos durables, append).
-   Si el `### Módulo` es nuevo, agregá también su `[[<modulo>]]` a la sección `## Módulos` de la nota-tema.
-3. **Si el tema no existe** como nota: creá `temas/<tema>/<tema>.md` (`tipo: tema`, `categoria: <cat>`,
-   `viewer-categoria: <color>`) con `Parte de [[<categoria>]].`, y sumá el tema a la nota-categoría.
-4. **Regenerá entera** la sección `## Tasks activas` de la nota-módulo afectada desde `tasks.md` (no la
+3. **Si el tema no existe** como nota: creá el hub `~/second-brain/Projects/<Contexto>/<tema>.md`
+   (también `type: project`, con su `context` y `summary`).
+4. **Regenerá entera** la sección `## Tasks activas` de la nota-proyecto afectada desde `tasks.md` (no la
    parchees línea por línea). Formato de cada línea: `` - `<id>` — <título> — <vence/est relevante> ``.
 
 Reglas duras de esta capa:
-- **`tasks.md` es el único source of truth de tasks.** Las notas-módulo son vista; nunca al revés.
-- **Wikilinks planner→Brain son one-way.** Podés linkear a `Brain/` desde una nota-módulo, pero **no edites
-  archivos de `Brain/`** desde esta skill sin confirmación del usuario.
-- Mapeo header→slug: lowercase-kebab (`Ferretería`→`ferreteria`, `Personal / Hobby`→`personal`).
+- **`tasks.md` es el único source of truth de tasks.** Las notas-proyecto son vista; nunca al revés.
+- **Wikilinks planner→Brain son one-way.** Podés linkear a `Brain/` desde una nota-proyecto, pero **no edites
+  archivos de `Brain/Conventions/`** desde esta skill sin confirmación del usuario.
+- Mapeo `context`: el `## Tema` cae en uno de `trabajo|estudio|vida` (ej. ferretería/cocina/gimnasio → según
+  corresponda a laburo o vida; uni → estudio). El slug del módulo sigue lowercase-kebab
+  (`Ferretería`→`ferreteria`, `Personal / Hobby`→`personal`).
 
 ## Formato — `state/goals.md`
 

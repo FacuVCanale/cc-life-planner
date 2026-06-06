@@ -145,11 +145,12 @@ condicional es *si hubo cambio de estado*: si un módulo no se movió, no lo toq
 
 El log crudo (`log/*.json`/`.md`) es temporal: importa para el planner (calibración, reviews). Pero el
 **second brain** no guarda fechas — guarda el **estado de las cosas**. Por eso, al final de cada log, si la
-sesión **cambió el estado** de un módulo o dejó un **aprendizaje durable**, actualizá la nota-módulo
-correspondiente (`temas/<tema>/<modulo>.md`). El módulo lo sacás de `block.module` del plan (o del
-`### Módulo` de la task en `tasks.md`).
+sesión **cambió el estado** de un módulo o dejó un **aprendizaje durable**, actualizá la nota-proyecto del
+vault (`~/second-brain/Projects/**/<modulo>.md`, localizala por el module slug; leé su estado con
+`node viewer/vault-extractor.js <modulo>` antes de reescribir). El módulo lo sacás de `block.module` del plan
+(o del `### Módulo` de la task en `tasks.md`).
 
-Tres secciones de la nota-módulo:
+Tres secciones de la nota-proyecto:
 
 - **`## Estado actual`** — snapshot vivo, **se sobrescribe** (no se acumula, sin fechas). 1-4 líneas en
   prosa: qué está hecho, qué falta, blocker actual, próximo paso. Reescribilo para que refleje dónde está
@@ -165,7 +166,7 @@ Tres secciones de la nota-módulo:
 
 Reglas:
 - **Sólo si cambió algo.** Si la sesión no movió el estado ni dejó aprendizaje (ej. "30min, sin novedades"),
-  **no toques** la nota-módulo.
+  **no toques** la nota-proyecto.
 - **Curado, no transcript.** No copies el log entry literal. Destilá el estado. La fecha/tiempo ya viven en
   `log/*.json` — no los dupliques en el brain.
 - Mostrale al usuario en 1 línea qué actualizaste en el brain, para que pueda corregir.
