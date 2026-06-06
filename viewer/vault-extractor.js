@@ -26,7 +26,9 @@ function walk(dir) {
   return out;
 }
 
-// Parser de frontmatter YAML simple (sólo lo que usamos: escalares y listas inline [a, b]).
+// Parser de frontmatter YAML simple. Soporta escalares, listas inline [a, b] y listas
+// multilínea (formato "Properties" de Obsidian: `key:` seguido de `  - item`).
+const unquote = (s) => s.trim().replace(/^["']|["']$/g, '');
 function parseNote(file) {
   const raw = fs.readFileSync(file, 'utf8');
   const m = raw.match(/^---\n([\s\S]*?)\n---\n?([\s\S]*)$/);
@@ -34,16 +36,18 @@ function parseNote(file) {
   let body = raw;
   if (m) {
     body = m[2];
+    let curKey = null;
     for (const line of m[1].split('\n')) {
-      const mm = line.match(/^([a-zA-Z0-9_-]+):\s*(.*)$/);
-      if (!mm) continue;
-      let v = mm[2].trim();
-      if (v.startsWith('[') && v.endsWith(']')) {
-        v = v.slice(1, -1).split(',').map(s => s.trim().replace(/^["']|["']$/g, '')).filter(Boolean);
-      } else {
-        v = v.replace(/^["']|["']$/g, '');
-      }
-      fm[mm[1]] = v;
+      const item = line.match(/^\s+-\s+(.*)$/);
+      if (item && curKey) { fm[curKey].push(unquote(item[1])); continue; }
+      const kv = line.match(/^([A-Za-z0-9_-]+):\s*(.*)$/);
+      if (!kv) continue;
+      const key = kv[1];
+      const v = kv[2].trim();
+      if (v === '') { fm[key] = []; curKey = key; }          // posible lista multilínea
+      else if (v.startsWith('[') && v.endsWith(']')) {        // lista inline
+        fm[key] = v.slice(1, -1).split(',').map(unquote).filter(Boolean); curKey = null;
+      } else { fm[key] = unquote(v); curKey = null; }         // escalar
     }
   }
   return { fm, body };
