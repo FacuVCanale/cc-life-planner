@@ -33,9 +33,12 @@
 #
 # Primera vez en ESTA maquina (o tras cambiar settings / recuperar de un error):
 #   ./scripts/drive-sync.sh resync
-#   (bisync mantiene un baseline POR MAQUINA en ~/.cache/rclone/bisync/. Cada
-#    dispositivo necesita su propio `resync` la primera vez. El resync hace UNION
-#    sin borrar nada y, en conflicto, gana el mas nuevo: --resync-mode newer.)
+#   (bisync mantiene un baseline POR MAQUINA en el cache-dir de rclone:
+#    macOS  -> ~/Library/Caches/rclone/bisync/
+#    Linux  -> ~/.cache/rclone/bisync/
+#    (confirmá el tuyo con `rclone config paths`). Cada dispositivo necesita su
+#    propio `resync` la primera vez. El resync hace UNION sin borrar nada y, en
+#    conflicto, gana el mas nuevo: --resync-mode newer.)
 #
 # Red de seguridad: lo que se sobreescribe/borra se archiva con timestamp
 #   - lado local : <repo>/.drive-backups/<stamp>/   (gitignored)
