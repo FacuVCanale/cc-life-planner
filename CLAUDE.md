@@ -79,7 +79,7 @@ Reglas:
 - `log/YYYY-MM-DD.json` es el **source of truth**. Schema: `{date: string, entries: [{task_id, time_spent_min, status, notes, timestamp}]}`.
 - `log/YYYY-MM-DD.md` es una **vista**: regenerarla siempre desde el JSON, nunca editar el `.md` a mano.
 - El skill `logueador` y el endpoint `POST /api/log` del viewer comparten la misma lógica de upsert (key: `task_id`), centralizada en `viewer/log-utils.js` (`upsertEntry` + `regenLogMd`). No la dupliques: importá de ahí.
-- **Logueo auto desde git** (modo del `/log`): `scripts/git-day-scan.js YYYY-MM-DD` lee commits del autor (de `state/repo-map.json`) en `~/code/*`, los agrupa en sesiones (gap >90min) y propone entries. El tiempo es **estimado** del span de commits, no medido. El usuario confirma antes del upsert.
+- **Logueo auto desde git+GitHub** (modo del `/log`): `scripts/git-day-scan.js YYYY-MM-DD` captura el trabajo del autor (de `state/repo-map.json`) en `~/code/*` y propone entries. Mira commits de **todas las ramas** (`git log --all`, no solo el HEAD), **deduplica worktrees** del mismo repo (`GS-VTO*` comparten `.git`), y suma **actividad de GitHub** (PRs/reviews/comentarios/issues vía `gh search`, on por default, `--no-github` la apaga, degrada a solo-git si no hay auth/red). El tiempo es **estimado**, no medido (commits = span de sesiones; GitHub = costo fijo por evento). El usuario confirma antes del upsert.
 
 ## Schema del plan diario
 

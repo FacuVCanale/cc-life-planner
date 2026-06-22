@@ -74,14 +74,19 @@ Mostrá:
 Para días de mucho trabajo de código (el patrón real de Facu: ver [[user-como-labura-facu]]). En vez de pedirle que recuerde tiempos, los infiere de los commits.
 
 Pasos:
-1. Corré `node scripts/git-day-scan.js YYYY-MM-DD` (sin fecha → hoy). Lee los commits del autor (de `state/repo-map.json` → `author_emails`) en cada repo de `~/code/*`, los agrupa en **sesiones** (gap >90min = sesión nueva, no cuenta la noche), y propone una entry por repo: `task_id`/`module` (de `repo-map.json`), `time_spent_min` (suma de sesiones, **estimado**), `notes` (mensajes de los commits).
-2. **Mostrale la propuesta al usuario** (tabla: repo → task_id · min · ventana). NO escribas todavía.
-3. El usuario confirma, corrige tiempos, o descarta filas. El tiempo es estimado del span de commits — recordáselo.
+1. Corré `node scripts/git-day-scan.js YYYY-MM-DD` (sin fecha → hoy). Captura el trabajo del autor (`state/repo-map.json` → `author_emails` / cuenta `gh`) y propone una entry por repo. Qué mira:
+   - **Commits de TODAS las ramas** de cada repo en `~/code/*` (`git log --all`, no solo el HEAD checkouteado), agrupados en **sesiones** (gap >90min = sesión nueva, no cuenta la noche).
+   - **Worktrees** del mismo repo (comparten `.git`, ej. `GS-VTO*`) se **deduplican**: escanea un solo representante, no cuenta los commits N veces.
+   - **GitHub** (on por default, degradable): PRs creadas/revisadas/comentadas e issues creados/comentados por el autor ese día (vía `gh search`, rango con tz local -03). Tiempo = **costo fijo por evento** (PR≈15min, review≈20min, thread/issue≈10min). Se **suma** a los minutos de commits; el campo `github:{}` de cada proposal trae los conteos para la tabla. Si `gh` no está autenticado o no hay red, **degrada a solo-git** sin romper (avisa por stderr). Para apagarla: `--no-github`.
+
+   Cada proposal: `task_id`/`module` (de `repo-map.json`, lookup por nombre de repo), `time_spent_min` (commits + GitHub, **estimado**), `notes` (commits + resumen GitHub).
+2. **Mostrale la propuesta al usuario** (tabla: repo → task_id · min · ventana · GitHub). NO escribas todavía.
+3. El usuario confirma, corrige tiempos, o descarta filas. El tiempo es estimado (span de commits + costo fijo GitHub) — recordáselo.
 4. Aplicá upsert (mismo contrato que los otros modos) **sólo a las filas confirmadas**.
-5. Si un repo no está en `repo-map.json`, cae en `ad-hoc-<repo>-<fecha>`; ofrecé agregar el mapeo.
+5. Si un repo no está en `repo-map.json`, cae en `ad-hoc-<repo>-<fecha>`; ofrecé agregar el mapeo. (Un repo con actividad **solo-GitHub** —revisado/comentado pero no clonado en `~/code`— también aparece como proposal.)
 6. Comportamiento de curación del brain: **igual que `/log`** (este modo lo invoca el usuario, no el viewer) → al cerrar, actualizá `## Estado actual` / `## Cierre` / `## Aprendizajes` de los módulos tocados.
 
-Limitación honesta: el tiempo NUNCA es medido, es inferido de timestamps de commits. Trabajo concurrente (varios repos a la vez) puede solaparse — no sumes ciegamente entre repos sin avisar que se solapan.
+Limitación honesta: el tiempo NUNCA es medido. Los commits se infieren de timestamps; la actividad de GitHub es **costo fijo por evento** (no mide duración) y el filtro por día usa el `updated` del PR/issue, no el timestamp exacto del comentario. Trabajo concurrente (varios repos a la vez) puede solaparse — no sumes ciegamente entre repos sin avisar que se solapan.
 
 ### Modo 5: calendar — eventos del día (clases, reuniones, lo NO-código)
 
