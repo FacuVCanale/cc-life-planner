@@ -30,7 +30,7 @@ const SESSION_GAP_MIN = 90;           // gap > esto entre commits => sesión nue
 
 // Costo fijo por evento de GitHub (heurística — el tiempo de GitHub no tiene "duración" medible).
 // Siempre `estimated: true`; el usuario corrige en /log. Precedencia por ítem: authored > reviewed > commented.
-const GH_PR_MIN = 15;      // PR creada/actualizada por el autor
+const GH_PR_MIN = 15;      // PR creada por el autor ESE día (no "actualizada" — ver ghSearch)
 const GH_REVIEW_MIN = 20;  // review sobre una PR ajena
 const GH_THREAD_MIN = 10;  // comentario(s) en una PR/issue ajena
 const GH_ISSUE_MIN = 10;   // issue creado por el autor
@@ -161,10 +161,67 @@ function ghAvailable() {
   }
 }
 
-function ghSearch(kind, qualifier, rango) {
+let _ghLogin = null;
+function ghLogin() {
+  if (_ghLogin !== null) return _ghLogin;
+  try {
+    _ghLogin = execFileSync('gh', ['api', 'user', '--jq', '.login'],
+      { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], timeout: 15000 }).trim();
+  } catch (e) {
+    _ghLogin = '';
+  }
+  return _ghLogin;
+}
+
+function ghApiJson(endpoint) {
+  try {
+    const out = execFileSync('gh', ['api', endpoint, '--paginate'],
+      { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], timeout: 25000, maxBuffer: 20 * 1024 * 1024 });
+    // --paginate concatena arrays: "][" entre páginas.
+    return JSON.parse(out.replace(/\]\s*\[/g, ',') || '[]');
+  } catch (e) {
+    return null; // null = no se pudo verificar (≠ [] = verificado y vacío)
+  }
+}
+
+// ¿El usuario dejó un review/comentario en ESTE ítem en ESTA fecha local?
+// `--updated` de gh search solo dice "el hilo se movió ese día", no que lo hayas movido vos:
+// un review tuyo de abril en una PR que otro cierra hoy se contaba como trabajo de hoy.
+// Devuelve true/false, o null si no se pudo verificar (ahí conservamos el ítem para no perder señal).
+function userTouchedOnDay(nameWithOwner, number, type, date) {
+  const me = ghLogin();
+  if (!me) return null;
+  const endpoints = type === 'pr'
+    ? [`repos/${nameWithOwner}/pulls/${number}/reviews`,
+       `repos/${nameWithOwner}/pulls/${number}/comments`,
+       `repos/${nameWithOwner}/issues/${number}/comments`]
+    : [`repos/${nameWithOwner}/issues/${number}/comments`];
+  let anyOk = false;
+  for (const ep of endpoints) {
+    const arr = ghApiJson(ep);
+    if (arr === null || !Array.isArray(arr)) continue;
+    anyOk = true;
+    for (const it of arr) {
+      const who = it.user && it.user.login;
+      if (who !== me) continue;
+      const when = it.submitted_at || it.created_at || it.updated_at;
+      if (!when) continue;
+      // Fecha LOCAL del usuario (America/Argentina/Buenos_Aires, UTC-3).
+      const localDay = new Date(new Date(when).getTime() - 3 * 3600 * 1000).toISOString().slice(0, 10);
+      if (localDay === date) return true;
+    }
+  }
+  return anyOk ? false : null;
+}
+
+function ghSearch(kind, qualifier, rango, dateFilter = 'updated') {
   // kind: 'prs' | 'issues'. qualifier: ej '--author=@me'. rango: 'YYYY-..-03:00..YYYY-..-03:00'.
+  // dateFilter: 'created' (el ítem NACIÓ ese día) | 'updated' (hubo actividad ese día).
+  // Para role=authored usamos SIEMPRE 'created': con 'updated' una PR vieja que alguien más
+  // cierra/toca hoy se contaba como "PR creada hoy" e inventaba tiempo (caso real: 26 PRs de
+  // abril cerradas en masa el 2026-07-16 → 390 min fantasma en un día sin trabajo).
   const args = [
-    'search', kind, qualifier, `--updated=${rango}`, '--limit', '100',
+    'search', kind, qualifier, `--${dateFilter}=${rango}`, '--limit', '100',
     '--json', 'number,title,repository,url,updatedAt',
   ];
   try {
@@ -185,23 +242,38 @@ function githubActivityForDay(date) {
   const rango = `${date}T00:00:00-03:00..${date}T23:59:59-03:00`;
   process.stderr.write('GitHub: consultando actividad del autor (5 queries)…\n');
   const buckets = [
-    { list: ghSearch('prs', '--author=@me', rango), type: 'pr', role: 'authored' },
+    // authored → 'created': solo lo que NACIÓ ese día (ver nota en ghSearch).
+    { list: ghSearch('prs', '--author=@me', rango, 'created'), type: 'pr', role: 'authored' },
+    { list: ghSearch('issues', '--author=@me', rango, 'created'), type: 'issue', role: 'authored' },
+    // reviewed/commented → 'updated': gh search no expone la fecha del review/comentario en sí,
+    // así que "hubo actividad ese día" es lo más fino disponible. Es condición necesaria pero no
+    // suficiente → puede sobrecontar si otro tocó el hilo. Por eso todo sale `estimated: true`.
     { list: ghSearch('prs', '--reviewed-by=@me', rango), type: 'pr', role: 'reviewed' },
     { list: ghSearch('prs', '--commenter=@me', rango), type: 'pr', role: 'commented' },
-    { list: ghSearch('issues', '--author=@me', rango), type: 'issue', role: 'authored' },
     { list: ghSearch('issues', '--commenter=@me', rango), type: 'issue', role: 'commented' },
   ];
   const rank = { authored: 3, reviewed: 2, commented: 1 };
   const byRepo = {};
+  let descartados = 0;
   for (const { list, type, role } of buckets) {
     for (const it of list || []) {
       const repo = it.repository && it.repository.name;
       if (!repo) continue;
+      // authored ya vino filtrado por --created. reviewed/commented vinieron por --updated:
+      // verificamos contra la API que la actividad sea TUYA y de ESE día.
+      if (role !== 'authored') {
+        const nwo = it.repository && it.repository.nameWithOwner;
+        const touched = nwo ? userTouchedOnDay(nwo, it.number, type, date) : null;
+        if (touched === false) { descartados++; continue; }
+      }
       const b = byRepo[repo] || (byRepo[repo] = { prRoles: {}, issueRoles: {} });
       const roles = type === 'pr' ? b.prRoles : b.issueRoles;
       const cur = roles[it.number];
       if (!cur || rank[role] > rank[cur]) roles[it.number] = role;
     }
+  }
+  if (descartados) {
+    process.stderr.write(`GitHub: ${descartados} ítem(s) descartado(s) — el hilo se movió ese día pero la actividad tuya es de otra fecha.\n`);
   }
   return byRepo;
 }
