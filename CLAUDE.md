@@ -21,7 +21,7 @@ Cada slash command edita sólo sus archivos. No mezclar.
 | Comando / skill | Lee | Escribe |
 |---|---|---|
 | `/onboarding` (onboarding) | `state/*.md` (para detectar contenido existente) | `state/context.md`, `state/goals.md`, `state/tasks.md` (incremental, con confirmación si hay contenido); **bootstrap de notas-proyecto en `~/second-brain/Projects/`** (opcional, incluye `## Cierre`) |
-| `/archivar` (archivador) | `state/tasks.md`, `log/YYYY-MM-DD.json` (ayer) | `state/tasks.md` (remueve `[x]`), `state/tasks-archive.md` (append); **regenera `## Tasks activas` de las notas-proyecto del vault afectadas** (`status: cerrado` si el `## Cierre` está completo, si no `dormido` si quedan en 0). Para partial/deferred consulta al user antes de editar. |
+| `/archivar` (archivador) | `state/tasks.md`, `log/YYYY-MM-DD.json` (ayer) | `state/tasks.md` (remueve `[x]`), `state/tasks-archive.md` (append), `state/tasks-pausadas.md` (mover/traer con confirmación del user); **regenera `## Tasks activas` de las notas-proyecto del vault afectadas** (`status: cerrado` si el `## Cierre` está completo, si no `dormido` si quedan en 0). Para partial/deferred consulta al user antes de editar. |
 | `/plan-hoy` (planner-diario) | `state/*.md`, `log/` últimos 7d, Google Calendar, **`## Cierre` de notas-módulo**, **repo scouts sobre `~/code/*`** | `plans/YYYY-MM-DD.md` (tablero: ⏰FIJO/🎯MUST-DO/🚦CARRILES/⚠️ALERTAS/🔭PRÓXIMOS + footer `[[modulo]]`), `plans/YYYY-MM-DD.json` (`blocks`=anclas FIJOS + `must_dos`/`carriles`/`alertas`/`proximos_anclas`). **Invoca `archivador` antes.** |
 | `/capturar` (capturador) | `state/tasks.md`, `state/goals.md` | `state/tasks.md` o `state/goals.md` o `state/inbox.md`; **crea/actualiza `~/second-brain/Projects/<Contexto>/<modulo>.md`** (incluye `## Cierre` si el proyecto tiene cierre definible) |
 | `/log` (logueador) | `plans/YYYY-MM-DD.json` (infiere task_id/`module`); **`scripts/git-day-scan.js` + `state/repo-map.json`** (modo git) | `log/YYYY-MM-DD.json`, `log/YYYY-MM-DD.md` (+ footer `[[modulo]]`); **actualiza `## Estado actual`/`## Cierre`/`## Aprendizajes` de la nota-módulo si la sesión cambió el estado** |
@@ -29,6 +29,21 @@ Cada slash command edita sólo sus archivos. No mezclar.
 | `/revisar-objetivos` (revisor-objetivos) | `state/goals.md`, `log/` últimos 30-90d, **`## Cierre` de módulos** | sugiere edits a `state/goals.md` (con confirmación; verdicts `cerca-de-cierre`/`scope-creep`) |
 
 Regla: si una skill necesita modificar un archivo fuera de su columna "escribe", **pedí confirmación al usuario** antes de tocar.
+
+## Los cuatro estados de una task
+
+Una task no es sólo activa o terminada. Los cuatro estados, con su archivo:
+
+| estado | dónde vive | qué significa |
+|---|---|---|
+| **activa** | `state/tasks.md` (`- [ ]`) | el planner la puede traer al día de hoy |
+| **terminada** | `state/tasks-archive.md` | se hizo (o quedó obsoleta); histórico, no vuelve |
+| **pausada** | `state/tasks-pausadas.md` | **viva pero sin fecha ni dueño hoy**: el trabajo se va a retomar, sólo que no ahora. Cada línea declara `DESTRABA CUANDO: <condición>` |
+| **descartada** | se borra | no se va a hacer nunca |
+
+**Por qué existe "pausada":** un proyecto que se frena (se fue la persona que lo hacía, se cayó el cliente, falta un insumo externo) no tiene tasks terminadas ni descartadas — tiene trabajo real esperando. Dejarlas en `tasks.md` le mete ruido al planner todos los días; archivarlas como hechas miente. `tasks-pausadas.md` las conserva completas, con la condición que las devuelve a `tasks.md`.
+
+**Reglas:** el planner **nunca** lee `tasks-pausadas.md` para armar el día. Pausar y despausar se hace **con confirmación explícita del usuario** — nunca por iniciativa de una skill. Al despausar, la línea vuelve a `tasks.md` a su `## Tema` → `### Módulo` original.
 
 ## Capa de conocimiento (vault `~/second-brain`) y la frontera con el planner
 

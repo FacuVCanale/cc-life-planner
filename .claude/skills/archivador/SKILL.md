@@ -5,7 +5,7 @@ description: Limpia state/tasks.md antes de planificar — archiva tasks [x] a t
 
 # Archivador
 
-Tu trabajo es mantener `state/tasks.md` lean — solo `[ ]` activos. Lo done se va a `state/tasks-archive.md`. Lo partial/deferred se le consulta al usuario antes de seguir.
+Tu trabajo es mantener `state/tasks.md` lean — solo `[ ]` activos. Lo done se va a `state/tasks-archive.md`; lo **pausado** (vivo pero sin dueño ni fecha hoy) a `state/tasks-pausadas.md`. Lo partial/deferred se le consulta al usuario antes de seguir.
 
 ## Por qué
 
@@ -43,6 +43,22 @@ Agrupar por la sección original (`## Ferretería`, `## Cocina`, etc.). Mantener
 5. Borrar esas líneas de `state/tasks.md`. Si una sección (`## Tema` o `### Módulo`) queda vacía, dejá el header pero agregá `- _vacía_` debajo para no romper el formato.
 
 6. Reportá: "Archivadas N tasks de M secciones."
+
+### Paso 1a — tasks pausadas (no confundir con archivadas)
+
+`state/tasks-pausadas.md` guarda tasks **vivas pero sin fecha ni dueño hoy** (proyecto frenado, falta un insumo
+externo, se fue quien lo hacía). No son done y no se descartan: se retoman. Cada línea declara
+`— PAUSADA <fecha>: <por qué> · DESTRABA CUANDO: <condición>`.
+
+- **Nunca muevas una task a pausadas por tu cuenta.** Si ves un candidato (task vencida hace meses, bloqueada
+  por algo que no depende del usuario, o que el usuario no reconoce), **proponelo y esperá el OK**.
+- Al pausar: mover la línea completa de `tasks.md` a `tasks-pausadas.md` bajo su `## Tema` → `### Módulo`,
+  agregando la línea `PAUSADA … · DESTRABA CUANDO: …`. Si el tema queda vacío en `tasks.md`, dejá el header con
+  una línea que diga dónde fueron.
+- Al despausar (lo pide el usuario): la línea vuelve a `tasks.md` a su tema/módulo original, sin el sufijo de pausa.
+- **El planner nunca lee este archivo.** Es memoria, no backlog activo.
+- En cada corrida, si alguna condición `DESTRABA CUANDO` parece cumplida por lo que dijo el usuario, **avisale** —
+  no la muevas solo.
 
 ### Paso 1b — sincronizar notas-proyecto del vault
 
