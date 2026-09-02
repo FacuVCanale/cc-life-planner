@@ -26,8 +26,9 @@ function walk(dir) {
   return out;
 }
 
-// Parser de frontmatter YAML simple. Soporta escalares, listas inline [a, b] y listas
-// multilínea (formato "Properties" de Obsidian: `key:` seguido de `  - item`).
+// Parser de frontmatter YAML simple. Soporta escalares, listas inline [a, b], listas
+// multilínea (formato "Properties" de Obsidian: `key:` seguido de `  - item`) y block
+// scalars (`key: >-` / `|`, que Obsidian genera al envolver un summary largo).
 const unquote = (s) => s.trim().replace(/^["']|["']$/g, '');
 function parseNote(file) {
   const raw = fs.readFileSync(file, 'utf8');
@@ -37,18 +38,27 @@ function parseNote(file) {
   if (m) {
     body = m[2];
     let curKey = null;
+    let block = null;   // { key, fold } mientras se acumula un block scalar
     for (const line of m[1].split('\n')) {
+      if (block) {
+        // El bloque sigue mientras la línea esté indentada o vacía.
+        if (line.trim() === '' || /^\s/.test(line)) { block.lines.push(line.trim()); continue; }
+        fm[block.key] = block.fold ? block.lines.join(' ').trim() : block.lines.join('\n').trim();
+        block = null;
+      }
       const item = line.match(/^\s+-\s+(.*)$/);
       if (item && curKey) { fm[curKey].push(unquote(item[1])); continue; }
       const kv = line.match(/^([A-Za-z0-9_-]+):\s*(.*)$/);
       if (!kv) continue;
       const key = kv[1];
       const v = kv[2].trim();
-      if (v === '') { fm[key] = []; curKey = key; }          // posible lista multilínea
+      if (/^[>|][-+]?$/.test(v)) { block = { key, fold: v[0] === '>', lines: [] }; curKey = null; }  // block scalar
+      else if (v === '') { fm[key] = []; curKey = key; }      // posible lista multilínea
       else if (v.startsWith('[') && v.endsWith(']')) {        // lista inline
         fm[key] = v.slice(1, -1).split(',').map(unquote).filter(Boolean); curKey = null;
       } else { fm[key] = unquote(v); curKey = null; }         // escalar
     }
+    if (block) fm[block.key] = block.fold ? block.lines.join(' ').trim() : block.lines.join('\n').trim();
   }
   return { fm, body };
 }
