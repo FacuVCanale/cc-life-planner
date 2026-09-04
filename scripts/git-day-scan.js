@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 // cc-life-planner — escaneo de actividad del día para logueo auto.
 //
-// Uso:  node scripts/git-day-scan.js [YYYY-MM-DD] [--code-dir ~/code] [--no-github]
+// Uso:  node scripts/git-day-scan.js [YYYY-MM-DD] [--code-dir ~/code] [--no-github] [--tz-offset -03:00]
 //       (sin fecha → hoy, hora local America/Argentina/Buenos_Aires)
+//       --tz-offset: offset del día a escanear (default -03:00, Buenos Aires). Desde Europa: +02:00.
 //
 // Captura el trabajo del autor (state/repo-map.json → author_emails / cuenta gh) del día:
 //   - Commits de TODAS las ramas de cada repo en ~/code/* (`git log --all`, no solo el HEAD).
@@ -34,13 +35,15 @@ const GH_PR_MIN = 15;      // PR creada por el autor ESE día (no "actualizada" 
 const GH_REVIEW_MIN = 20;  // review sobre una PR ajena
 const GH_THREAD_MIN = 10;  // comentario(s) en una PR/issue ajena
 const GH_ISSUE_MIN = 10;   // issue creado por el autor
+let TZ_OFFSET = '-03:00';  // offset del día (ventana [00:00, 23:59:59] en ese offset); --tz-offset lo cambia
 
 function parseArgs(argv) {
-  const out = { date: null, codeDir: path.join(os.homedir(), 'code'), github: true };
+  const out = { date: null, codeDir: path.join(os.homedir(), 'code'), github: true, tzOffset: '-03:00' };
   for (let i = 2; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--code-dir') out.codeDir = argv[++i];
     else if (a === '--no-github') out.github = false;
+    else if (a === '--tz-offset') out.tzOffset = argv[++i];
     else if (/^\d{4}-\d{2}-\d{2}$/.test(a)) out.date = a;
   }
   if (!out.date) out.date = localTodayISO();
@@ -107,8 +110,8 @@ function dedupeWorktrees(codeDir, dirNames, repoMap) {
 
 function gitCommitsForDay(repoDir, date, emails) {
   // commits del autor en [date 00:00, date+1 00:00) hora local, de TODAS las ramas. Formato: epoch|ISO|subject
-  const since = `${date}T00:00:00-03:00`;
-  const until = `${date}T23:59:59-03:00`;
+  const since = `${date}T00:00:00${TZ_OFFSET}`;
+  const until = `${date}T23:59:59${TZ_OFFSET}`;
   const args = [
     '-C', repoDir, 'log', '--all', '--no-merges',
     `--since=${since}`, `--until=${until}`,
@@ -239,7 +242,7 @@ function githubActivityForDay(date) {
     process.stderr.write('GitHub: gh no disponible o sin auth → sigo con git local.\n');
     return {};
   }
-  const rango = `${date}T00:00:00-03:00..${date}T23:59:59-03:00`;
+  const rango = `${date}T00:00:00${TZ_OFFSET}..${date}T23:59:59${TZ_OFFSET}`;
   process.stderr.write('GitHub: consultando actividad del autor (5 queries)…\n');
   const buckets = [
     // authored → 'created': solo lo que NACIÓ ese día (ver nota en ghSearch).
@@ -313,7 +316,9 @@ function resolveTaskId(repoName, cfg, date, defaultTemplate) {
 }
 
 function main() {
-  const { date, codeDir, github } = parseArgs(process.argv);
+  const { date, codeDir, github, tzOffset } = parseArgs(process.argv);
+  if (!/^[+-]\d{2}:\d{2}$/.test(tzOffset)) { console.error(`--tz-offset inválido: ${tzOffset} (esperado ±HH:MM)`); process.exit(1); }
+  TZ_OFFSET = tzOffset;
   const map = loadRepoMap();
   const emails = map.author_emails || [];
   const hhmm = (iso) => iso.slice(11, 16);
