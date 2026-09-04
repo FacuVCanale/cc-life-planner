@@ -17,6 +17,8 @@ Facu **no ejecuta en agenda** (multitasking, trabajo emergente concurrente, proy
 - **⚠️ ALERTAS** — deadlines que se acercan, cabos sueltos vencidos, scope-creep, bloqueadores. → `alertas[]`.
 - **🔭 PRÓXIMOS ANCLAS** — anclas con fecha de los próximos días. → `proximos_anclas[]`.
 
+**Hábitos diarios:** los ítems bajo `## Hábitos diarios` de `state/context.md` entran **todos los días** al tablero como un carril `admin` corto (o MUST-DO si el hábito tiene un vencimiento asociado esa semana). No viven en `tasks.md` ni se archivan: se repiten.
+
 **Ruteo:** evento de calendar con hora → FIJO. Deadline con fecha sin hora → MUST-DO (hoy/inminente) o ALERTA (se acerca). Trabajo flexible de Facu → CARRILES. Lo único que pierde el horario rígido es el trabajo flexible; todo lo que tiene fecha/hora real queda MÁS visible, arriba.
 
 ## Paso previo obligatorio: repo scouts
