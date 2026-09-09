@@ -35,6 +35,18 @@ Campos:
 - `notes`: texto libre, opcional.
 - `timestamp`: ISO con timezone.
 
+## Horas de laburo, no horas hombre (regla firme)
+
+El tiempo que se loguea es el del **frente**, no el de Facu sentado. El trabajo que ejecutan los
+agentes cuenta completo, aunque él haya tirado dos prompts desde un viaje. Consecuencias:
+
+- **La suma de un día puede pasar de 24 h y no es un error.** No prorratear, no ajustar para que
+  cierre, y **nunca** preguntarle cuántas horas reales puso él para repartirlas entre repos.
+- Un día de viaje en el que sólo prompteó **no** se loguea como "no hizo nada": van las horas del
+  frente más la nota de contexto.
+
+Detalle y casos → `~/second-brain/Brain/user-como-labura-facu.md`.
+
 ## Lógica de upsert
 
 **Key**: `task_id`. Si ya existe entry con mismo `task_id`:
