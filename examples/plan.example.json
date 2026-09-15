@@ -1,7 +1,6 @@
 {
   "date": "2026-05-02",
   "generated_at": "2026-05-02T07:15:00-03:00",
-  "calibration_factor": 1.4,
   "categories": {
     "ferreteria": "#f59e0b",
     "cocina":     "#10b981",
@@ -78,6 +77,6 @@
     "El scout de ferr-ventas marcó el POS como casi cerrado: falta solo el lock del submit + un test con el cajero."
   ],
   "calibration_notes": [
-    "Factor bimodal (context.md): el fix del POS es dev → ~0.4x; estimado 3h, esperá ~1.2-1.5h reales."
+    "Sin muestra reciente suficiente para esta categoría; se usó la guía dev de context.md sólo para comparar carga, no para asignar horario."
   ]
 }
