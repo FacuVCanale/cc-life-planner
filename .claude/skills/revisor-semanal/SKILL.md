@@ -1,110 +1,36 @@
 ---
 name: revisor-semanal
-description: Revisa la semana cerrada — avance vs goals, balance de categorías, completion rate. Sugiere ajustes para la semana siguiente. Usa esta skill cuando el usuario invoque /revisar-semana o pida una revisión de la semana.
+description: Revisa una semana cerrada del planner y propone ajustes basados en logs y avance verificable.
 ---
 
 # Revisor semanal
 
-Tu trabajo es cerrar el loop entre planificación y ejecución a nivel semana, y proponer ajustes accionables para la próxima.
+Generá `reviews/YYYY-WW.md` con una lectura honesta de ejecución, goals y cierre de proyectos.
 
-## Inputs
+## Fuentes
 
-- `state/goals.md` — objetivos vigentes.
-- `plans/*.json` y `log/*.json` de los 7 días de la semana.
-- `state/tasks.md` — para ver qué está activo.
+Ejecutá `./scripts/drive-sync.sh pull`. Leé los siete días de `plans/*.json` y `log/*.json`, tasks/goals vigentes y `## Cierre` de módulos relacionados mediante `viewer/vault-extractor.js`.
+
+## Métricas con cobertura explícita
+
+Desde el tablero, `blocks[]` contiene sólo Calendar/buffers. El trabajo planeado vive en `must_dos[]` y `carriles[]` sin duración. Por eso:
+
+- `completion_rate`: calculalo sólo sobre ítems planeados con `task_id` que puedan vincularse inequívocamente con logs. Informá numerador, denominador y cobertura. Sin cobertura suficiente, no publiques un porcentaje total.
+- `plan vs real`: compará minutos sólo donde exista una estimación válida. No derives `planned_min` de Calendar ni inventes duración para carriles.
+- Calibración: informá por categoría cuando haya pares estimado/real; no recomiendes un factor escalar global.
+- Calendar prueba compromisos, no tasks cumplidas.
+
+El log real, la actividad vinculada a goals y el avance en `## Cierre` son las señales principales.
 
 ## Análisis
 
-### 1. Completion rate
+- Horas y resultados por goal con vínculo verificable; declaralos sin actividad cuando corresponda.
+- Distribución por día/categoría sólo si el patrón tiene base suficiente.
+- Para cada proyecto cerrable: ítems que avanzaron, mínimo restante y posible scope creep.
+- Una corrección del usuario prevalece. No resucites trabajo declarado hecho ni conviertas planes en logros.
 
-```
-completion_rate = (entries con status=done) / (bloques planeados con task_id)
-```
+## Output
 
-Por categoría también. Llamá la atención si:
-- Total < 60%: hay un problema sistemático (sobre-planificación, interrupciones, energía mal estimada).
-- Una categoría < 30% mientras otras > 80%: desbalance — ¿esa categoría está mal estimada o mal priorizada?
+Usá frontmatter `tipo: review`, `capa: fecha`, período ISO, hallazgos cuantificados con sus límites y sugerencias accionables. Wikilinks sólo a módulos/temas/goals existentes; nunca a tasks o fechas. Footer: `**Módulos tocados:**` con módulos únicos derivados de planes/logs vinculados.
 
-### 2. Avance contra goals
-
-Por cada goal vigente:
-- Listá las tareas que contribuyeron (logs cuyas categorías o task_ids matchean).
-- Horas reales invertidas.
-- ¿Hubo avance medible? Si el goal tiene un milestone próximo, ¿cuánto se redujo la distancia?
-- Goals **sin actividad esta semana** → flaggear con prioridad.
-
-### 3. Diff plan vs real
-
-```
-diff_pct_semana = (sum(actual_min) - sum(planned_min)) / sum(planned_min) * 100
-```
-
-Si > 30%: estimaciones siguen optimistas, sugerí subir factor.
-Si < -30%: o sobreestimás o no estás llenando los bloques. Investigar.
-
-### 4. Distribución por día de la semana
-
-¿Hay días con load desbalanceado? ¿Lunes vs viernes? Mencionar si hay patrón claro (ej. "los viernes loggeás la mitad que el resto — ¿deadline cognitive load o realmente días más cortos?").
-
-### 5. Avance hacia el cierre de proyectos abiertos
-
-Para cada proyecto con `## Cierre` en su nota-proyecto del vault (GS-VTO, PDD, etc.), leído vía el extractor (`const { extractModuleState } = require('./viewer/vault-extractor')` → `extractModuleState(slug).cierre`; CLI: `node viewer/vault-extractor.js <slug>`): ¿cuántos ítems del checklist se cerraron esta semana? ¿el proyecto está **convergiendo** o el trabajo se fue a cosas **fuera del mínimo** (scope-creep)? Llamá la atención si un proyecto con compromiso de horas (ej. GS-VTO ≥5h/día) sumó muchas horas pero no movió el checklist de cierre.
-
-> **Nota tablero (Feature 2):** desde el rediseño, `plans/*.json` lleva en `blocks` sólo los anclas del calendar; el trabajo flexible vive en `carriles`/`must_dos` (sin horas). El `completion_rate` y `diff_pct` basados en `blocks` con `task_id` quedan **incompletos** — para esta review pesá más el **log real** (incluido el logueo auto desde git) y el avance del `## Cierre` que el cumplimiento de bloques horarios.
-
-## Output: `reviews/YYYY-WW.md`
-
-Lleva **frontmatter** (capa "fecha" del grafo) y un **footer `**Módulos tocados:**`** con los módulos
-únicos de la semana (derivados de `block.module` de los planes). En el cuerpo, linkeá **módulos/temas y
-goals** con `[[ ]]` cuando los nombres existan como nota — **nunca** linkees tasks individuales ni fechas.
-
-```markdown
----
-tipo: review
-capa: fecha
----
-# Review semana 2026-W18 (2026-04-27 → 2026-05-03)
-
-## Completion
-- Total: 12 done / 18 planeadas (67%)
-- Por categoría:
-  - ferreteria: 5/5 (100%)
-  - cocina: 3/6 (50%) ← bajo
-  - gimnasio: 4/7 (57%)
-
-## Avance contra goals
-
-### Corto plazo
-- ✅ "Lanzar el menú de otoño" (2026-05-22): 8h invertidas esta semana, ~40% completado. [[cocina-menu]]
-
-### Mediano plazo
-- ⚠️ "Armar servicio de catering": 0h invertidas. Sin actividad por 2da semana consecutiva.
-- ✅ "Estabilizar el control de stock": 5h en inventario, on track. [[ferr-inventario]]
-
-### Largo plazo
-- (sin actividad — esperable, son de horizonte largo)
-
-## Diff plan vs real
-- Total planeado: 1620min · real: 1980min · +22%
-- Factor implícito 1.22, default 1.4 → estás siendo *menos* optimista que tu factor. Bajar a 1.25?
-
-## Patrones
-- Sábados loggeaste 90min, mitad del resto. Patrón consistente últimas 3 semanas.
-- "Cocina" sub-completada — bloques los puse muy temprano (8am) y faltaste 2 veces.
-
-## Sugerencias para la semana siguiente
-1. **Bloquear 2h el sábado para el catering** — cotizar es el siguiente milestone.
-2. **Mover bloques de Cocina a la tarde** — patrón claro de no llegar a las 8am.
-3. **Bajar factor de optimismo a 1.25** — calibración estable últimas 3 semanas.
-4. **Revisar el menú de otoño** — quedan 19 días para el lanzamiento, ~16h estimadas, holgura cómoda pero no descuidar.
-
----
-**Módulos tocados:** [[ferr-inventario]] · [[cocina-menu]] · [[gym-rutinas]]
-```
-
-## Reglas
-
-- **Sé específico**: "bajo en cocina" no sirve; "bloques de 8am, faltaste 2 días" sí.
-- **Cuantificá**: porcentajes, horas, conteos. Sin números no hay revisión.
-- **Sugerencias accionables**: cada sugerencia tiene que poder traducirse a una acción concreta esta semana.
-- **No prescribas**: el usuario decide. Vos sugerís y justificás.
+No edites goals ni tasks desde esta skill. Ejecutá `./scripts/drive-sync.sh push` después de escribir la review.

@@ -1,207 +1,64 @@
 ---
 name: logueador
-description: Registra avance del día en log/YYYY-MM-DD.json (source of truth) y regenera el .md. Source-shared con el endpoint POST /api/log del viewer. Usa esta skill cuando el usuario quiera loggear cuánto tardó en una tarea, marcarla como done/partial/deferred, o invoque /log.
+description: Registra tiempo o estado de trabajo en el log diario del planner, incluido el modo estimado desde git/GitHub.
 ---
 
 # Logueador
 
-Tu trabajo es mantener `log/YYYY-MM-DD.json` consistente con lo que el usuario realmente hizo, sin perder entries ni duplicar.
+Registrá lo que realmente ocurrió en `log/YYYY-MM-DD.json` y regenerá su vista Markdown. No conviertas planes o eventos de Calendar en logros.
 
-## Source of truth
+## Contrato
 
-`log/YYYY-MM-DD.json` es la única fuente de verdad. `log/YYYY-MM-DD.md` es una vista derivada — **siempre regenerala** desde el JSON, nunca la edites directo.
+- JSON es source of truth: `{date, entries:[{task_id,time_spent_min,status,notes,timestamp}]}`.
+- Estados: `done | partial | deferred | skipped`.
+- Usá timestamps ISO con offset `-03:00` y la fecha local de America/Argentina/Buenos_Aires.
+- `log/YYYY-MM-DD.md` siempre se regenera; nunca se edita a mano.
+- El flujo operacional hace `./scripts/drive-sync.sh pull` antes de leer y `push` después de terminar.
 
-## Schema del JSON
+Para escribir, importá `upsertEntry` y `regenLogMd` desde `viewer/log-utils.js`. No copies ni reimplementes su algoritmo. `upsertEntry` suma sesiones del mismo `task_id`, conserva el último estado/timestamp y concatena notas.
 
-```json
-{
-  "date": "2026-05-02",
-  "entries": [
-    {
-      "task_id": "tp-rob-3",
-      "time_spent_min": 145,
-      "status": "done",
-      "notes": "terminé fase 3, falta documentación",
-      "timestamp": "2026-05-02T10:12:00-03:00"
-    }
-  ]
-}
-```
+## Horas de frente
 
-Campos:
-- `task_id`: slug del `tasks.md` o del bloque del plan. Si la actividad no estaba planeada, usá `ad-hoc-<slug>`.
-- `time_spent_min`: minutos enteros.
-- `status`: `done` | `partial` | `deferred` | `skipped`.
-- `notes`: texto libre, opcional.
-- `timestamp`: ISO con timezone.
+Logueá el tiempo del frente de trabajo, incluido trabajo ejecutado por agentes. La suma diaria puede superar 24h: no prorratees ni preguntes por horas-persona para forzarla a cerrar. Conservá el contexto de viaje u otra simultaneidad en `notes`.
 
-## Horas de laburo, no horas hombre (regla firme)
+## Modos
 
-El tiempo que se loguea es el del **frente**, no el de Facu sentado. El trabajo que ejecutan los
-agentes cuenta completo, aunque él haya tirado dos prompts desde un viaje. Consecuencias:
+### Texto libre
 
-- **La suma de un día puede pasar de 24 h y no es un error.** No prorratear, no ajustar para que
-  cierre, y **nunca** preguntarle cuántas horas reales puso él para repartirlas entre repos.
-- Un día de viaje en el que sólo prompteó **no** se loguea como "no hizo nada": van las horas del
-  frente más la nota de contexto.
+Mapeá contra `plans/YYYY-MM-DD.json` y el log existente. Inferí sólo lo inequívoco; si dos IDs son plausibles, preguntá cuál. Si el usuario ya dio task, tiempo y estado, escribí sin reconfirmar.
 
-Detalle y casos → `~/second-brain/Brain/user-como-labura-facu.md`.
+### Sin argumentos
 
-## Lógica de upsert
+Mostrá plan resumido, log actual y los datos faltantes. Pedí una única actualización concreta.
 
-**Key**: `task_id`. Si ya existe entry con mismo `task_id`:
-- `time_spent_min`: **sumar** al existente (no reemplazar — el usuario puede loggear varias sesiones de la misma tarea en el día).
-- `status`: tomar el último (más reciente).
-- `notes`: concatenar con `\n` si ambos no vacíos.
-- `timestamp`: actualizar al más reciente.
+### Viewer
 
-Si no existe: append.
+`POST /api/log/:date` ya usa los mismos helpers. No dupliques lógica ni edites este camino desde la skill.
 
-## Modos de invocación
+### Git/GitHub estimado
 
-### Modo 1: texto libre desde `/log`
+Corré `node scripts/git-day-scan.js YYYY-MM-DD`. El script cubre todas las ramas, deduplica worktrees y degrada a sólo git si GitHub no está disponible.
 
-Input: `"estuve 2h con TP rob, terminé fase 3"`.
+Mostrá las proposals con repo, `task_id`, minutos, ventana y actividad GitHub. Como los tiempos son estimados, pedí confirmación sólo si todavía no fue dada; una autorización previa para aceptar la propuesta persiste. Escribí únicamente las filas aceptadas. Para repos sin mapping, usá el ad-hoc propuesto y ofrecé actualizar `state/repo-map.json` fuera de esta escritura.
 
-Pasos:
-1. Leé `plans/YYYY-MM-DD.json` para mapear texto → `task_id`.
-2. Inferí: `task_id`, `time_spent_min` (parseá "2h" → 120), `status` (`"terminé"` → `done`).
-3. Si la inferencia es ambigua, preguntá ("¿te referís a `tp-rob-3` o `tp-rob-doc`?").
-4. Aplicá upsert.
+### Calendar — clases y reuniones
 
-### Modo 2: estructurado desde el viewer
+Cuando el usuario pide loguear el día completo o desde Calendar, consultá los eventos del día en los calendarios `facundovcanale@gmail.com` y `Universidad`. Usá el conector Google Calendar disponible: en Claude puede exponerse como `mcp__claude_ai_Google_Calendar__list_events`; en Codex descubrí su equivalente, sin asumir ese identificador. Si no está disponible, reportá el dato faltante y continuá con las fuentes accesibles.
 
-El viewer postea a `POST /api/log/:date` con body `{task_id, time_spent_min, status, notes}`. El handler usa la **misma** función de upsert. No hay inferencia: los campos vienen explícitos.
+Proponé una entry por evento con `task_id: calendar-<slug>-<YYYY-MM-DD>` y duración prevista editable. Registrá sólo asistencia/estado y minutos confirmados: asistió → `done`, parcial → `partial`, no asistió → omitir o `skipped` si lo pide. Una confirmación ya dada no se vuelve a pedir. Inferí módulo sólo con mapping inequívoco del plan/contexto; si falta, no lo inventes. Combiná propuestas git y Calendar en una sola revisión y no dupliques la misma actividad. Actividades diferentes simultáneas conservan entradas separadas y notas de simultaneidad, según horas de frente.
 
-### Modo 3: `/log` sin argumentos
+## Reconciliación y curación
 
-Mostrá:
-- Plan de hoy (resumido).
-- Log actual (entries existentes).
-- Diff por tarea (estimado vs loggeado).
-- Pregunta: "¿qué actualizar?".
+La corrección más nueva del usuario prevalece. Calendar indica intención/compromiso, nunca prueba `done`. No reabras ni recrees una task que el usuario declaró hecha.
 
-### Modo 4: auto desde git (`/log --git` o "logueá lo que hice hoy")
+Después del upsert, si cambió el estado durable del módulo, actualizá su nota-proyecto localizada por `module`:
 
-Para días de mucho trabajo de código (el patrón real de Facu: ver [[user-como-labura-facu]]). En vez de pedirle que recuerde tiempos, los infiere de los commits.
+- Sobrescribí `## Estado actual` con el snapshot vigente, sin fechas.
+- Marcá en `## Cierre` sólo hitos demostrados por el log o confirmados por el usuario.
+- Append en `## Aprendizajes` sólo decisiones/hallazgos durables y de señal alta.
+- Regenerá `## Tasks activas` desde `tasks.md` si cambió una task.
+- Seteá `status: cerrado` sólo si el checklist de cierre quedó completo.
 
-Pasos:
-1. Corré `node scripts/git-day-scan.js YYYY-MM-DD` (sin fecha → hoy). Captura el trabajo del autor (`state/repo-map.json` → `author_emails` / cuenta `gh`) y propone una entry por repo. Qué mira:
-   - **Commits de TODAS las ramas** de cada repo en `~/code/*` (`git log --all`, no solo el HEAD checkouteado), agrupados en **sesiones** (gap >90min = sesión nueva, no cuenta la noche).
-   - **Worktrees** del mismo repo (comparten `.git`, ej. `GS-VTO*`) se **deduplican**: escanea un solo representante, no cuenta los commits N veces.
-   - **GitHub** (on por default, degradable): PRs creadas/revisadas/comentadas e issues creados/comentados por el autor ese día (vía `gh search`, rango con tz local -03). Tiempo = **costo fijo por evento** (PR≈15min, review≈20min, thread/issue≈10min). Se **suma** a los minutos de commits; el campo `github:{}` de cada proposal trae los conteos para la tabla. Si `gh` no está autenticado o no hay red, **degrada a solo-git** sin romper (avisa por stderr). Para apagarla: `--no-github`.
+No edites `Brain/Conventions/` ni inventes hechos ausentes. Ofrecé archivador si se cerró una task, sin ejecutarlo fuera del write-set autorizado.
 
-   Cada proposal: `task_id`/`module` (de `repo-map.json`, lookup por nombre de repo), `time_spent_min` (commits + GitHub, **estimado**), `notes` (commits + resumen GitHub).
-2. **Mostrale la propuesta al usuario** (tabla: repo → task_id · min · ventana · GitHub). NO escribas todavía.
-3. El usuario confirma, corrige tiempos, o descarta filas. El tiempo es estimado (span de commits + costo fijo GitHub) — recordáselo.
-4. Aplicá upsert (mismo contrato que los otros modos) **sólo a las filas confirmadas**.
-5. Si un repo no está en `repo-map.json`, cae en `ad-hoc-<repo>-<fecha>`; ofrecé agregar el mapeo. (Un repo con actividad **solo-GitHub** —revisado/comentado pero no clonado en `~/code`— también aparece como proposal.)
-6. Comportamiento de curación del brain: **igual que `/log`** (este modo lo invoca el usuario, no el viewer) → al cerrar, actualizá `## Estado actual` / `## Cierre` / `## Aprendizajes` de los módulos tocados.
-
-Limitación honesta: el tiempo NUNCA es medido. Los commits se infieren de timestamps; la actividad de GitHub es **costo fijo por evento** (no mide duración) y el filtro por día usa el `updated` del PR/issue, no el timestamp exacto del comentario. Trabajo concurrente (varios repos a la vez) puede solaparse — no sumes ciegamente entre repos sin avisar que se solapan.
-
-### Modo 5: calendar — eventos del día (clases, reuniones, lo NO-código)
-
-El logueo del día tiene **dos fuentes automáticas**: git (código) y **calendar** (clases, reuniones, eventos). No le pidas a Facu que recuerde "a mano" — traé su agenda y preguntá por cada evento.
-
-Pasos (corre junto al Modo 4 cuando se loguea el día completo):
-1. Traé los eventos del día de Google Calendar vía MCP `mcp__claude_ai_Google_Calendar__list_events` (calendarios `facundovcanale@gmail.com` + `Universidad`), igual que hace el planner.
-2. Por cada evento, **proponé una entry y preguntá si lo hizo**: `task_id` = `calendar-<slug-del-evento>-<fecha>`, `time_spent_min` = duración del evento (editable), `status` según respuesta del user: **fui/lo hice** → `done`, **parcial** → `partial`, **no fui** → no registrar (o `skipped` si quiere dejar traza).
-3. **Módulo**: derivá del summary del evento por prefijo (igual que el planner matchea attention en `context.md`): Robótica→`uni-robotica`, NLP→`uni-nlp`, Historia→`uni-historia`, Diseño→`uni-diseno`, Software→`uni-ingsoft`. Reuniones/eventos personales (ej. "CEO JPMorgan") → sin módulo salvo que aplique uno.
-4. **Concurrencia**: si una clase era `attention: passive` y el git scan ya capturó código de esa franja (ej. FluxNet durante Robótica), no dupliques tiempo — registrá la clase como `done` (asistencia) y dejá el trabajo concurrente en su propia entry de git; mencionalo en las notas.
-5. El user confirma/ajusta; aplicá upsert sólo a lo confirmado.
-
-### Flujo recomendado "loguear el día" (`/log --git` o "logueá lo de hoy")
-
-Combiná las fuentes en una sola pasada, mostrando UNA tabla de propuestas para confirmar:
-1. **Git** (Modo 4) → trabajo de código.
-2. **Calendar** (Modo 5) → clases/reuniones.
-3. **Manual** → lo que no esté en ninguna (ej. entreno, llamada). Preguntá "¿algo más que no haya salido de git ni del calendar?".
-Luego upsert de todo lo confirmado + curación del brain.
-
-## Regeneración del `.md`
-
-Después de cada upsert, regenerá `log/YYYY-MM-DD.md`. **Debe quedar byte-idéntico** a lo que produce
-`regenLogMd()` en `viewer/serve.js` (ambos regeneran la misma vista desde el JSON):
-
-```markdown
----
-tipo: log
-capa: fecha
----
-# Log 2026-05-02
-
-## ferr-ventas-pos — Arreglar el POS que duplica tickets
-- 10:12 · done · 145min
-- encontré el bug en el cierre de caja, falta testear
-
-## ad-hoc-llamado-proveedor — Llamar al proveedor de pinturas
-- 11:30 · done · 15min
-
----
-**Resumen**: 160min loggeados · 1 done · 0 partial · 0 deferred · 0 skipped
-
-**Módulos:** [[ferr-ventas]]
-```
-
-El título de cada sección lo sacás de `plans/YYYY-MM-DD.json` (campo `title` del bloque con ese `task_id`). Si no está en el plan (ad-hoc), usá un placeholder o pediselo al usuario.
-
-Reglas del render (igual que el viewer):
-- **Frontmatter** `tipo: log` / `capa: fecha` al tope (marca la capa "fecha" del grafo).
-- **Footer `**Módulos:**`**: módulos únicos (en orden de aparición) de las entries loggeadas. El módulo de
-  cada entry sale de `block.module` del plan JSON para ese `task_id`. Linkeá sólo al módulo — nunca a otras
-  fechas ni a tasks. Si ninguna entry tiene módulo (todo ad-hoc / sin plan), **omití** la línea del footer.
-- Si una task no tiene `module` en el plan, no contribuye al footer (no inventes módulo).
-
-## Actualizar el estado en el brain (al final del log) — PASO FIJO, NO OPCIONAL
-
-**Esto se hace SIEMPRE al cerrar un `/log`, por default — no es a demanda ni hay que pedirlo.** Después de
-escribir el JSON y regenerar el `.md`, evaluá cada módulo tocado y actualizá su nota. Lo único que es
-condicional es *si hubo cambio de estado*: si un módulo no se movió, no lo toques (ver regla abajo). Pero la
-**evaluación es obligatoria en cada log** — nunca cierres un `/log` sin haber pasado por acá.
-
-El log crudo (`log/*.json`/`.md`) es temporal: importa para el planner (calibración, reviews). Pero el
-**second brain** no guarda fechas — guarda el **estado de las cosas**. Por eso, al final de cada log, si la
-sesión **cambió el estado** de un módulo o dejó un **aprendizaje durable**, actualizá la nota-proyecto del
-vault (`~/second-brain/Projects/**/<modulo>.md`, localizala por el module slug; leé su estado con
-`node viewer/vault-extractor.js <modulo>` antes de reescribir). El módulo lo sacás de `block.module` del plan
-(o del `### Módulo` de la task en `tasks.md`).
-
-Tres secciones de la nota-proyecto:
-
-- **`## Estado actual`** — snapshot vivo, **se sobrescribe** (no se acumula, sin fechas). 1-4 líneas en
-  prosa: qué está hecho, qué falta, blocker actual, próximo paso. Reescribilo para que refleje dónde está
-  el módulo **ahora**. Ej: tras loguear "encontré por qué el POS duplica tickets, es el cierre de caja",
-  el `## Estado actual` de `ferr-ventas` pasa a *"El POS duplica tickets al cerrar caja. Causa identificada:
-  doble submit en el cierre. Próximo: agregar lock al botón y testear con el cajero."*
-- **`## Cierre`** (si existe) — checklist del mínimo funcional. Si la sesión completó un ítem, marcá `- [x]`.
-  **No agregues ítems nuevos al mínimo** salvo que el usuario lo pida explícito — si la sesión metió trabajo
-  fuera del mínimo, es señal de scope creep (mencionáselo, no lo normalices en el checklist). Si se
-  completaron todos los ítems, avisá al usuario y ofrecé setear `status: cerrado` en el frontmatter.
-- **`## Aprendizajes`** — **se acumula** (append), pero sólo señal alta: decisiones, hallazgos, cosas que
-  vas a querer recordar. No metas "avancé 30min" acá.
-
-Reglas:
-- **Sólo si cambió algo.** Si la sesión no movió el estado ni dejó aprendizaje (ej. "30min, sin novedades"),
-  **no toques** la nota-proyecto.
-- **Curado, no transcript.** No copies el log entry literal. Destilá el estado. La fecha/tiempo ya viven en
-  `log/*.json` — no los dupliques en el brain.
-- Mostrale al usuario en 1 línea qué actualizaste en el brain, para que pueda corregir.
-- Esto lo hace `/log` (con criterio del modelo). El logueo rápido desde el viewer NO actualiza el brain —
-  es sólo registro de tiempo; la curación pasa cuando corrés `/log`.
-
-## Output al usuario
-
-Después de cada log:
-- Confirmá la entry agregada/actualizada.
-- Si hay plan de hoy con `estimated_hours` para esa task, mostrá diff: "estimaste 2h, llevás 2h25, +21%".
-- Si la entry cierra la tarea (`status: done`), recordá si quedaba algo pendiente del plan del día.
-- Si actualizaste el brain, decí qué módulo y qué cambió (1 línea).
-
-## Reglas duras
-
-- **Nunca** reemplazar `time_spent_min` — siempre sumar (varias sesiones por día son normales).
-- **Nunca** editar el `.md` a mano. Regenerá desde JSON.
-- **Nunca** pisar entries existentes sin upsert.
-- Timestamp con timezone explícito (UTC-3 para Buenos Aires).
-- **Siempre** evaluá actualizar el brain al cerrar el `/log` (paso fijo, no a demanda). Sólo el logueo rápido del viewer queda exento. Si un módulo no cambió de estado, no lo toques — pero la evaluación no se saltea.
+Reportá entries agregadas/actualizadas, total del día, estimaciones aceptadas y notas-proyecto curadas.
