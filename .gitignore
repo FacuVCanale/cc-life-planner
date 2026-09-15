@@ -29,3 +29,9 @@ node_modules/
 
 # Runtime de oh-my-codex (cache/logs/estado local)
 .omx/
+
+# reportes de infra con IPs/puertos — no se commitean
+vm-oracle-inventario.md
+
+# Worktrees efimeros de agentes
+.claude/worktrees/
